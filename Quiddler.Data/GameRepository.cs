@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
@@ -7,9 +9,11 @@ namespace Quiddler.Data
 {
     public interface IGameRepository
     {
+        Task<IEnumerable<Game>> GetAll();
         Task<Game> Get(string id);
         Task<string> Create(Game game);
         Task Update(Game game);
+        Task Delete(string id);
     }
 
     public class GameRepository : IGameRepository
@@ -22,6 +26,11 @@ namespace Quiddler.Data
             {
                 Conversion = DynamoDBEntryConversion.V2
             });
+        }
+
+        public async Task<IEnumerable<Game>> GetAll()
+        {
+            return await _db.ScanAsync<Game>(new List<ScanCondition>()).GetRemainingAsync();
         }
 
         public async Task<Game> Get(string id)
@@ -42,6 +51,11 @@ namespace Quiddler.Data
         public async Task Update(Game game)
         {
             await _db.SaveAsync(game);
+        }
+
+        public async Task Delete(string id)
+        {
+            await _db.DeleteAsync<Game>(id);
         }
     }
 }

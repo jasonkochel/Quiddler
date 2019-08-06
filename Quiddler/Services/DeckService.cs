@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Quiddler.Models;
 
 namespace Quiddler.Services
 {
-    public static class DeckService
+    public interface IDeckService
     {
-        private static readonly string[] Cards = new []
-        {
+        Stack<string> GenerateShuffled();
+        int GetWordValue(string word);
+    }
+
+    public abstract class BaseDeckService : IDeckService
+    {
+        protected readonly string[] Cards = {
             "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "C", "C", "D", "D", "D", "D",
             "E", "E", "E", "E", "E", "E", "E", "E", "E", "E", "E", "E", "F", "F", "G", "G", "G", "G",
             "H", "H", "I", "I", "I", "I", "I", "I", "I", "I", "J", "J", "K", "K", "L", "L", "L", "L",
@@ -18,7 +22,7 @@ namespace Quiddler.Services
             "QU", "QU", "IN", "IN", "ER", "ER", "CL", "CL", "TH", "TH"
         };
 
-        private static readonly Dictionary<string, int> Values = new Dictionary<string, int>
+        private readonly Dictionary<string, int> _values = new Dictionary<string, int>
         {
             {"A", 2}, {"B", 8}, {"C", 8}, {"D", 5}, {"E", 2}, {"F", 6}, {"G", 6}, {"H", 7}, {"I", 2}, {"J", 13},
             {"K", 8}, {"L", 3}, {"M", 5}, {"N", 5}, {"O", 2}, {"P", 6}, {"Q", 15}, {"R", 5}, {"S", 3}, {"T", 3},
@@ -26,16 +30,32 @@ namespace Quiddler.Services
             {"TH", 9}
         };
 
-        public static Stack<string> GenerateShuffled(int? seed = null)
+        public abstract Stack<string> GenerateShuffled();
+
+        public int GetWordValue(string word)
+        {
+            return word.Sum(c => _values[c.ToString().ToUpper()]);
+        }
+    }
+
+    public class DeckService : BaseDeckService
+    {
+        public override Stack<string> GenerateShuffled()
         {
             var deck = Cards.Select(c => c).ToArray();
-            (seed == null ? new Random() : new Random(seed.Value)).Shuffle(deck);
+            (new Random()).Shuffle(deck);
             return new Stack<string>(deck);
         }
 
-        public static int GetWordValue(string word)
+    }
+
+    public class MockDeckService : BaseDeckService
+    {
+        public override Stack<string> GenerateShuffled()
         {
-            return word.Sum(c =>  Values[c.ToString()]);
+            var deck = Cards.Select(c => c).ToArray();
+            (new Random(1)).Shuffle(deck);
+            return new Stack<string>(deck);
         }
     }
 }

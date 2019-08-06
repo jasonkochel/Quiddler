@@ -26,10 +26,16 @@ namespace Quiddler.Data
 
     public class Player
     {
+        public Player()
+        {
+            Scores = new int[8];
+        }
+
         public string Name { get; set; }
         public List<string> Hand { get; set; }
-        public Dictionary<int, int> Scores { get; set; }
+        public int[] Scores { get; set; }
         public bool IsGoingOut { get; set; }
+        public List<string> Words { get; set; }
     }
 
     public class StringStackConverter : IPropertyConverter
@@ -46,7 +52,9 @@ namespace Quiddler.Data
 
         public object FromEntry(DynamoDBEntry entry)
         {
-            return new Stack<string>(entry.AsListOfString());
+            var serializedStack = entry.AsListOfString();
+            serializedStack.Reverse();  // Dynamo returns it "upside-down"
+            return new Stack<string>(serializedStack);
         }
     }
 }

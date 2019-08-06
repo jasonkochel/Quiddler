@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.101.45" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.100.1" />
+    <PackageReference Include="Google.Apis.Auth.AspNetCore" Version="1.40.3" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

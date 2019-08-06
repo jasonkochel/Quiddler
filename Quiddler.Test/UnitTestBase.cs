@@ -23,8 +23,18 @@ namespace Quiddler.Test
             var configuration = builder.Build();
 
             var services = new ServiceCollection();
+
+            services.AddMemoryCache();
+            services.AddHttpClient();
+
+            services.AddOptions();
+            services.Configure<AppSettings>(configuration);
+
             services.AddDefaultAWSOptions(configuration.GetAWSOptions());
             services.AddAWSService<IAmazonDynamoDB>();
+
+            services.AddSingleton<IDeckService, DeckService>();
+            services.AddSingleton<IDictionaryService, DictionaryService>();
 
             services.AddScoped<IGameService, GameService>();
             services.AddScoped<IGameRepository, GameRepository>();
