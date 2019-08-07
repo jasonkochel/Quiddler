@@ -1,26 +1,31 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Quiddler.Models;
 using Quiddler.Services;
 
 namespace Quiddler.Controllers
 {
-    [Route("api")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class GameController : ControllerBase
+    [Authorize]
+    public class GamesController : ControllerBase
     {
         private readonly IGameService _gameService;
         private readonly IDictionaryService _dictionaryService;
 
-        public GameController(IGameService gameService, IDictionaryService dictionaryService)
+        protected string PlayerName => HttpContext.User?.Claims?.SingleOrDefault(p => p.Type == "name")?.Value;
+
+        public GamesController(IGameService gameService, IDictionaryService dictionaryService)
         {
             _gameService = gameService;
             _dictionaryService = dictionaryService;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<GameModel>> Get()
+        public async Task<IEnumerable<GameListModel>> Get()
         {
             return await _gameService.GetAll();
         }
@@ -31,16 +36,16 @@ namespace Quiddler.Controllers
             return await _gameService.Get(id);
         }
 
-        [HttpPost("{name}")]
-        public async Task<GameModel> Post(string name)
+        [HttpPost]
+        public async Task<GameModel> Post()
         {
-            return await _gameService.Create(name);
+            return await _gameService.Create(PlayerName);
         }
 
-        [HttpPost("{id}/players/{name}")]
-        public async Task<GameModel> AddPlayer(string id, string name, [FromQuery] bool startGame)
+        [HttpPost("{id}/players")]
+        public async Task<GameModel> AddPlayer(string id, [FromQuery] bool startGame)
         {
-            var gameModel = await _gameService.AddPlayer(id, name);
+            var gameModel = await _gameService.AddPlayer(id, PlayerName);
 
             if (startGame)
             {
@@ -53,6 +58,7 @@ namespace Quiddler.Controllers
         [HttpPut("{id}")]
         public async Task<GameModel> Put(string id, [FromBody] MoveModel move)
         {
+            move.PlayerId = PlayerName;
             return await _gameService.MakeMove(id, move);
         }
 

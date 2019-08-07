@@ -1,4 +1,5 @@
 import { combineReducers } from "redux";
-import authReducer from "./authDuck";
+import auth from "./authDuck";
+import game from "./gameDuck";
 
-export default combineReducers({ authReducer });
+export default combineReducers({ auth, game });

@@ -1,24 +1,26 @@
 import React from "react";
 import { connect } from "react-redux";
-import logo from "./logo.svg";
+import { HashRouter as Router, Route } from "react-router-dom";
 import "./App.css";
+import Game from "./components/Game";
+import GameList from "./components/GameList";
 import Login from "./components/Login";
-import { tokenIsValid } from "./ducks/authDuck";
 
-function App({ authState }) {
+function App({ auth }) {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        {tokenIsValid(authState) ? `Logged In as ${authState.name}` : <Login />}
-      </header>
-    </div>
+    <Router>
+      <div className="App">
+        <Route exact path="/" component={Login} />
+        <Route exact path="/games/:id" component={Game} />
+        <Route exact path="/games" component={GameList} />
+      </div>
+    </Router>
   );
 }
 
 const mapStateToProps = state => {
   return {
-    authState: state.authReducer
+    auth: state.auth
   };
 };
 

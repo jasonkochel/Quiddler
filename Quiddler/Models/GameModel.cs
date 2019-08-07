@@ -1,9 +1,21 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Quiddler.Data;
 
 namespace Quiddler.Models
 {
+
+    public class GameListModel
+    {
+        public string GameId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool HasStarted { get; set; }
+        public int? Round { get; set; }
+        public string Players { get; set; }
+        public string WhoseTurn { get; set; }
+    }
+
     public class GameModel
     {
         public string GameId { get; set; }
@@ -16,12 +28,25 @@ namespace Quiddler.Models
 
     public static class Mapper
     {
+        public static GameListModel MapEntityToListModel(Game game)
+        {
+            return new GameListModel
+            {
+                GameId = game.GameId,
+                CreatedAt = game.CreatedAt,
+                HasStarted = game.Round != null,
+                Round = game.Round + 2,
+                WhoseTurn = game.Players[game.Turn].Name,
+                Players = string.Join(", ", game.Players.Select(p => p.Name))
+            };
+        }
+
         public static GameModel MapEntityToModel(Game game)
         {
             return new GameModel
             {
                 GameId = game.GameId,
-                CardsInRound = game.Round + 2,
+                CardsInRound = game.Round + 2 ?? 0,
                 TopOfDiscardPile = game.DiscardPile == null || game.DiscardPile.Count == 0 ? null : game.DiscardPile.Peek(),
                 WhoIsGoingOut = game.Players.FirstOrDefault(p => p.IsGoingOut)?.Name,
                 WhoseTurn = game.Players[game.Turn].Name,

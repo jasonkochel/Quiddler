@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Quiddler.Data;
@@ -10,12 +11,14 @@ namespace Quiddler.Services
     public interface IGameService
     {
         Task<GameModel> Get(string gameId);
+        Task<IEnumerable<GameListModel>> GetAll();
+
         Task<GameModel> Create(string firstPlayerName);
-        Task Delete(string gameId);
         Task<GameModel> AddPlayer(string gameId, string newPlayerName);
         Task<GameModel> StartRound(string gameId);
         Task<GameModel> MakeMove(string gameId, MoveModel move);
-        Task<IEnumerable<GameModel>> GetAll();
+
+        Task Delete(string gameId);
     }
 
     public class GameService : IGameService
@@ -33,17 +36,16 @@ namespace Quiddler.Services
 
         public async Task<GameModel> Get(string gameId) => Mapper.MapEntityToModel(await _repo.Get(gameId));
 
-        public async Task<IEnumerable<GameModel>> GetAll()
+        public async Task<IEnumerable<GameListModel>> GetAll()
         {
             var games = await _repo.GetAll();
-            return games.Select(Mapper.MapEntityToModel);
+            return games.Select(Mapper.MapEntityToListModel);
         }
 
         public async Task<GameModel> Create(string firstPlayerName)
         {
             var gameId = await _repo.Create(new Game
             {
-                Round = 1,
                 Players = new List<Player>
                 {
                     new Player {Name = firstPlayerName}
@@ -53,19 +55,16 @@ namespace Quiddler.Services
             return await Get(gameId);
         }
 
-        public async Task Delete(string gameId)
-        {
-            await _repo.Delete(gameId);
-        }
-
         public async Task<GameModel> AddPlayer(string gameId, string newPlayerName)
         {
             var game = await _repo.Get(gameId);
 
-            game.Players.Add(new Player
+            if (game.Players.Any(p => p.Name == newPlayerName))
             {
-                Name = newPlayerName
-            });
+                throw new Exception($"Player '{newPlayerName}' is already part of this game");
+            }
+
+            game.Players.Add(new Player { Name = newPlayerName });
 
             await _repo.Update(game);
 
@@ -75,6 +74,9 @@ namespace Quiddler.Services
         public async Task<GameModel> StartRound(string gameId)
         {
             var game = await _repo.Get(gameId);
+
+            // Starting game for first time
+            if (game.Round == null) game.Round = 1;
 
             var deck = _deckService.GenerateShuffled();
 
@@ -92,7 +94,7 @@ namespace Quiddler.Services
             game.DiscardPile.Push(deck.Pop());
             game.Deck = deck;
 
-            game.Turn = game.Round % game.Players.Count;
+            game.Turn = game.Round.Value % game.Players.Count;
 
             await _repo.Update(game);
 
@@ -102,6 +104,8 @@ namespace Quiddler.Services
         public async Task<GameModel> MakeMove(string gameId, MoveModel move)
         {
             var game = await _repo.Get(gameId);
+
+            // TODO ensure it is move.Player's turn
 
             switch (move.Type)
             {
@@ -144,10 +148,12 @@ namespace Quiddler.Services
 
                     var score = move.Words.Sum(_deckService.GetWordValue);
 
+                    Debug.Assert(game.Round != null, "game.Round != null");
+
                     game.Players[game.Turn].IsGoingOut = true;
                     game.Players[game.Turn].Hand.Clear();
                     game.Players[game.Turn].Words = move.Words.ToList();
-                    game.Players[game.Turn].Scores[game.Round - 1] = score;
+                    game.Players[game.Turn].Scores[game.Round.Value - 1] = score;
 
                     game.DiscardPile.Push(move.Discard);
                     game.Turn = (game.Turn + 1) % game.Players.Count;
@@ -172,6 +178,11 @@ namespace Quiddler.Services
             }
 
             return Mapper.MapEntityToModel(game);
+        }
+
+        public async Task Delete(string gameId)
+        {
+            await _repo.Delete(gameId);
         }
     }
 }

@@ -1,15 +1,17 @@
-import React, { Component } from "react";
+import React from "react";
 import { GoogleLogin } from "react-google-login";
 import { connect } from "react-redux";
-import { login } from "../ducks/authDuck";
-import config from "../config.json";
+import { Redirect } from "react-router-dom";
+import { login, tokenIsValid } from "../ducks/authDuck";
 
-class Login extends Component {
-  onFailure = error => {
+const googleCallbackUrl = process.env.REACT_APP_API_BASE_URL + "/auth/google";
+
+const Login = ({ auth, login }) => {
+  const onFailure = error => {
     alert(error);
   };
 
-  googleResponse = response => {
+  const googleResponse = response => {
     const tokenBlob = new Blob(
       [JSON.stringify({ tokenId: response.tokenId }, null, 2)],
       { type: "application/json" }
@@ -20,24 +22,24 @@ class Login extends Component {
       mode: "cors",
       cache: "default"
     };
-    fetch(config.GOOGLE_AUTH_CALLBACK_URL, options).then(r => {
+    fetch(googleCallbackUrl, options).then(r => {
       r.json().then(result => {
-        this.props.login(result);
+        login(result.token);
       });
     });
   };
 
-  render() {
-    return (
-      <GoogleLogin
-        clientId={config.GOOGLE_CLIENT_ID}
-        buttonText="Google Login"
-        onSuccess={this.googleResponse}
-        onFailure={this.onFailure}
-      />
-    );
-  }
-}
+  return tokenIsValid(auth.token) ? (
+    <Redirect to="/games" />
+  ) : (
+    <GoogleLogin
+      clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}
+      buttonText="Google Login"
+      onSuccess={googleResponse}
+      onFailure={onFailure}
+    />
+  );
+};
 
 const mapStateToProps = state => {
   return {
@@ -45,12 +47,8 @@ const mapStateToProps = state => {
   };
 };
 
-const mapDispatchToProps = dispatch => {
-  return {
-    login: token => {
-      dispatch(login(token));
-    }
-  };
+const mapDispatchToProps = {
+  login
 };
 
 export default connect(

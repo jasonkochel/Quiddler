@@ -39,7 +39,8 @@ namespace Quiddler.Controllers
                 var claims = new[]
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim("name", payload.GivenName)
                 };
 
                 var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_appSettings.Value.JwtSecret));
@@ -53,8 +54,7 @@ namespace Quiddler.Controllers
 
                 return Ok(new
                 {
-                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                    name = payload.GivenName
+                    token = new JwtSecurityTokenHandler().WriteToken(token)
                 });
             }
             catch (Exception ex)

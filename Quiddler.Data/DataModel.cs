@@ -20,7 +20,7 @@ namespace Quiddler.Data
         [DynamoDBProperty(typeof(StringStackConverter))]
         public Stack<string> DiscardPile { get; set; }
 
-        public int Round { get; set; }
+        public int? Round { get; set; }
         public int Turn { get; set; }
     }
 
@@ -33,7 +33,10 @@ namespace Quiddler.Data
 
         public string Name { get; set; }
         public List<string> Hand { get; set; }
+
+        [DynamoDBProperty(typeof(IntArrayConverter))]
         public int[] Scores { get; set; }
+
         public bool IsGoingOut { get; set; }
         public List<string> Words { get; set; }
     }
@@ -55,6 +58,25 @@ namespace Quiddler.Data
             var serializedStack = entry.AsListOfString();
             serializedStack.Reverse();  // Dynamo returns it "upside-down"
             return new Stack<string>(serializedStack);
+        }
+    }
+
+    public class IntArrayConverter : IPropertyConverter
+    {
+        public DynamoDBEntry ToEntry(object value)
+        {
+            if (!(value is int[] array))
+            {
+                return new DynamoDBNull();
+            }
+
+            return new DynamoDBList(array.Select(i => new Primitive(i.ToString(), true)).ToList());
+        }
+
+        public object FromEntry(DynamoDBEntry entry)
+        {
+            var serialized = entry.AsListOfDynamoDBEntry();
+            return serialized.Select(i => i.AsInt()).ToArray();
         }
     }
 }
