@@ -12,7 +12,7 @@ namespace Quiddler.Models
         public DateTime CreatedAt { get; set; }
         public bool HasStarted { get; set; }
         public int? Round { get; set; }
-        public string Players { get; set; }
+        public List<string> Players { get; set; }
         public string WhoseTurn { get; set; }
     }
 
@@ -37,11 +37,11 @@ namespace Quiddler.Models
                 HasStarted = game.Round != null,
                 Round = game.Round + 2,
                 WhoseTurn = game.Players[game.Turn].Name,
-                Players = string.Join(", ", game.Players.Select(p => p.Name))
+                Players = game.Players.Select(p => p.Name).ToList()
             };
         }
 
-        public static GameModel MapEntityToModel(Game game)
+        public static GameModel MapEntityToModel(Game game, string myName)
         {
             return new GameModel
             {
@@ -54,7 +54,7 @@ namespace Quiddler.Models
                 {
                     Name = p.Name,
                     IsGoingOut = p.IsGoingOut,
-                    Hand = p.Hand,
+                    Hand = p.Name == myName ? p.Hand : null,
                     Score = p.Scores?.Sum(s => s) ?? 0,
                     Words = p.Words
                 }).ToList()

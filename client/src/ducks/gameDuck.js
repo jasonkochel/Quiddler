@@ -1,4 +1,5 @@
 import api from "../api";
+import { MOVETYPES } from "../const";
 
 const AJAX_STARTED = "ajax/STARTED";
 const AJAX_SUCCESS = "ajax/SUCCESS";
@@ -92,7 +93,7 @@ export const joinGame = id => {
   return async dispatch => {
     dispatch({ type: AJAX_STARTED });
     try {
-      var res = await api.put(`games/${id}/players?startGame=true`);
+      var res = await api.post(`games/${id}/players?startGame=true`);
       dispatch({ type: AJAX_SUCCESS });
       dispatch({ type: GAME_LOADED, payload: res.data });
     } catch (err) {
@@ -101,11 +102,22 @@ export const joinGame = id => {
   };
 };
 
-export const makeMove = id => {
-  return async dispatch => {
+export const makeMove = (moveType, moveData) => {
+  return async (dispatch, getState) => {
     dispatch({ type: AJAX_STARTED });
     try {
-      var res = await api.put(`games/${id}/players?startGame=true`);
+      const id = getState().game.game.gameId;
+
+      const move = {
+        type: moveType,
+        discard:
+          moveType === MOVETYPES.DISCARD || moveType === MOVETYPES.GO_OUT
+            ? moveData.cardToDiscard
+            : null,
+        words: moveType === MOVETYPES.GO_OUT ? moveData.words : null
+      };
+
+      var res = await api.put(`games/${id}`, move);
       dispatch({ type: AJAX_SUCCESS });
       dispatch({ type: GAME_LOADED, payload: res.data });
     } catch (err) {

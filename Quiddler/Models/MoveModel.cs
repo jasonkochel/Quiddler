@@ -4,7 +4,6 @@ namespace Quiddler.Models
 {
     public class MoveModel
     {
-        public string PlayerId { get; set; }
         public MoveType Type { get; set; }
         public string Discard { get; set; }
         public IEnumerable<string> Words { get; set; }

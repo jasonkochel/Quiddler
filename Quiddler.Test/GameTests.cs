@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using Quiddler.Models;
 using Quiddler.Services;
@@ -18,19 +17,25 @@ namespace Quiddler.Test
         [Fact]
         public async void should_create_game_with_two_players_and_start_first_round()
         {
-            var game = await _service.Create("Jason");
-            game = await _service.AddPlayer(game.GameId, "Ann");
+            Identity.Name = "Jason";
+            var game = await _service.Create();
+
+            Identity.Name = "Ann";
+            game = await _service.AddPlayer(game.GameId);
             game = await _service.StartRound(game.GameId);
+
             await _service.Delete(game.GameId);
         }
 
         [Fact]
         public async void should_play_a_round()
         {
-            var game = await _service.Create("Jason");
+            Identity.Name = "Jason";
+            var game = await _service.Create();
             var gameId = game.GameId;
 
-            await _service.AddPlayer(gameId, "Ann");
+            Identity.Name = "Ann";
+            await _service.AddPlayer(gameId);
             await _service.StartRound(gameId);
 
             await _service.MakeMove(gameId, new MoveModel { Type = MoveType.DrawFromShoe });

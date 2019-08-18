@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Quiddler.Controllers;
 using Quiddler.Data;
 using Quiddler.Models;
 
@@ -13,8 +14,8 @@ namespace Quiddler.Services
         Task<GameModel> Get(string gameId);
         Task<IEnumerable<GameListModel>> GetAll();
 
-        Task<GameModel> Create(string firstPlayerName);
-        Task<GameModel> AddPlayer(string gameId, string newPlayerName);
+        Task<GameModel> Create();
+        Task<GameModel> AddPlayer(string gameId);
         Task<GameModel> StartRound(string gameId);
         Task<GameModel> MakeMove(string gameId, MoveModel move);
 
@@ -26,15 +27,17 @@ namespace Quiddler.Services
         private readonly IGameRepository _repo;
         private readonly IDeckService _deckService;
         private readonly IDictionaryService _dictionaryService;
+        private readonly UserIdentity _identity;
 
-        public GameService(IGameRepository repo, IDeckService deckService, IDictionaryService dictionaryService)
+        public GameService(IGameRepository repo, IDeckService deckService, IDictionaryService dictionaryService, UserIdentity identity)
         {
             _repo = repo;
             _deckService = deckService;
             _dictionaryService = dictionaryService;
+            _identity = identity;
         }
 
-        public async Task<GameModel> Get(string gameId) => Mapper.MapEntityToModel(await _repo.Get(gameId));
+        public async Task<GameModel> Get(string gameId) => Mapper.MapEntityToModel(await _repo.Get(gameId), _identity.Name);
 
         public async Task<IEnumerable<GameListModel>> GetAll()
         {
@@ -42,23 +45,24 @@ namespace Quiddler.Services
             return games.Select(Mapper.MapEntityToListModel);
         }
 
-        public async Task<GameModel> Create(string firstPlayerName)
+        public async Task<GameModel> Create()
         {
             var gameId = await _repo.Create(new Game
             {
                 Players = new List<Player>
                 {
-                    new Player {Name = firstPlayerName}
+                    new Player {Name = _identity.Name}
                 }
             });
 
             return await Get(gameId);
         }
 
-        public async Task<GameModel> AddPlayer(string gameId, string newPlayerName)
+        public async Task<GameModel> AddPlayer(string gameId)
         {
             var game = await _repo.Get(gameId);
-
+            var newPlayerName = _identity.Name;
+            
             if (game.Players.Any(p => p.Name == newPlayerName))
             {
                 throw new Exception($"Player '{newPlayerName}' is already part of this game");
@@ -68,7 +72,7 @@ namespace Quiddler.Services
 
             await _repo.Update(game);
 
-            return Mapper.MapEntityToModel(game);
+            return Mapper.MapEntityToModel(game, _identity.Name);
         }
 
         public async Task<GameModel> StartRound(string gameId)
@@ -98,14 +102,17 @@ namespace Quiddler.Services
 
             await _repo.Update(game);
 
-            return Mapper.MapEntityToModel(game);
+            return Mapper.MapEntityToModel(game, _identity.Name);
         }
 
         public async Task<GameModel> MakeMove(string gameId, MoveModel move)
         {
             var game = await _repo.Get(gameId);
 
-            // TODO ensure it is move.Player's turn
+            if (game.Players[game.Turn].Name != _identity.Name)
+            {
+                throw new Exception("Not your turn");
+            }
 
             switch (move.Type)
             {
@@ -177,7 +184,7 @@ namespace Quiddler.Services
                 }
             }
 
-            return Mapper.MapEntityToModel(game);
+            return Mapper.MapEntityToModel(game, _identity.Name);
         }
 
         public async Task Delete(string gameId)

@@ -5,6 +5,7 @@ using System.Net.Http;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.EntityFrameworkCore;
+using Quiddler.Controllers;
 using Quiddler.Data;
 using Quiddler.Services;
 
@@ -13,6 +14,7 @@ namespace Quiddler.Test
     public class UnitTestBase
     {
         protected ServiceProvider ServiceProvider;
+        protected UserIdentity Identity;
 
         public UnitTestBase()
         {
@@ -36,10 +38,13 @@ namespace Quiddler.Test
             services.AddSingleton<IDeckService, DeckService>();
             services.AddSingleton<IDictionaryService, DictionaryService>();
 
+            services.AddScoped<UserIdentity, UserIdentity>();
             services.AddScoped<IGameService, GameService>();
             services.AddScoped<IGameRepository, GameRepository>();
 
             ServiceProvider = services.BuildServiceProvider();
+
+            Identity = ServiceProvider.GetRequiredService<UserIdentity>();
         }
     }
 }

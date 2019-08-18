@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Quiddler.Controllers;
 using Quiddler.Data;
 using Quiddler.Services;
 
@@ -55,7 +56,7 @@ namespace Quiddler
 
             services.AddSingleton<IDeckService, DeckService>();
             services.AddSingleton<IDictionaryService, DictionaryService>();
-
+            services.AddScoped<UserIdentity, UserIdentity>();
             services.AddScoped<IGameService, GameService>();
             services.AddScoped<IGameRepository, GameRepository>();
             services.AddScoped<IAuthService, AuthService>();
