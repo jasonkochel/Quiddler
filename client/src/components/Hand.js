@@ -17,8 +17,8 @@ const useStyles = makeStyles(theme => ({
 const Hand = ({ hand, onDiscard }) => {
   const classes = useStyles();
 
-  return hand.map(c => (
-    <Grid item xs={3}>
+  return hand.map((c, i) => (
+    <Grid key={i} item xs={3}>
       <Card className={classes.card} onClick={() => onDiscard(c)}>
         {c}
       </Card>

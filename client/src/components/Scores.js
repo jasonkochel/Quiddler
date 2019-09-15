@@ -17,7 +17,7 @@ const Scores = ({ players }) => {
   const width = 12 / players.length;
 
   return players.map(p => (
-    <Grid item xs={width}>
+    <Grid key={p.name} item xs={width}>
       <Paper square className={classes.paper}>
         {p.name}
         <br />

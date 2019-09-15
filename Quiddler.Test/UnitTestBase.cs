@@ -1,10 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using System.Net.Http;
 using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Microsoft.EntityFrameworkCore;
 using Quiddler.Controllers;
 using Quiddler.Data;
 using Quiddler.Services;
@@ -35,7 +31,7 @@ namespace Quiddler.Test
             services.AddDefaultAWSOptions(configuration.GetAWSOptions());
             services.AddAWSService<IAmazonDynamoDB>();
 
-            services.AddSingleton<IDeckService, DeckService>();
+            services.AddSingleton<IDeckService, MockDeckService>();
             services.AddSingleton<IDictionaryService, DictionaryService>();
 
             services.AddScoped<UserIdentity, UserIdentity>();

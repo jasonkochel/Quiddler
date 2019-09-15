@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Quiddler.Models
+﻿namespace Quiddler.Models
 {
     public class UserModel
     {
