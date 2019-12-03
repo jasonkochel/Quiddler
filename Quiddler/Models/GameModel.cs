@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Quiddler.Data;
+using Quiddler.Services;
 
 namespace Quiddler.Models
 {
@@ -20,15 +21,22 @@ namespace Quiddler.Models
     {
         public string GameId { get; set; }
         public int CardsInRound { get; set; }
-        public string TopOfDiscardPile { get; set; }
+        public CardModel TopOfDiscardPile { get; set; }
         public string WhoseTurn { get; set; }
         public string WhoIsGoingOut { get; set; }
         public List<PlayerModel> Players { get; set; }
     }
 
-    public static class Mapper
+    public class GameMapper
     {
-        public static GameListModel MapEntityToListModel(Game game)
+        private readonly IDeckService _deckService;
+
+        public GameMapper(IDeckService deckService)
+        {
+            _deckService = deckService;
+        }
+
+        public GameListModel MapEntityToListModel(Game game)
         {
             return new GameListModel
             {
@@ -41,20 +49,20 @@ namespace Quiddler.Models
             };
         }
 
-        public static GameModel MapEntityToModel(Game game, string myName)
+        public GameModel MapEntityToModel(Game game, string myName)
         {
             return new GameModel
             {
                 GameId = game.GameId,
                 CardsInRound = game.Round + 2 ?? 0,
-                TopOfDiscardPile = game.DiscardPile == null || game.DiscardPile.Count == 0 ? null : game.DiscardPile.Peek(),
+                TopOfDiscardPile = game.DiscardPile == null || game.DiscardPile.Count == 0 ? null : _deckService.ToCardModel(game.DiscardPile.Peek()),
                 WhoIsGoingOut = game.Players.FirstOrDefault(p => p.IsGoingOut)?.Name,
                 WhoseTurn = game.Players[game.Turn].Name,
                 Players = game.Players.Select(p => new PlayerModel
                 {
                     Name = p.Name,
                     IsGoingOut = p.IsGoingOut,
-                    Hand = p.Name == myName ? p.Hand : null,
+                    Hand = p.Name == myName && p.Hand != null ? p.Hand.Select(c => _deckService.ToCardModel(c)).ToList() : null,
                     Score = p.Scores?.Sum(s => s) ?? 0,
                     Words = p.Words
                 }).ToList()

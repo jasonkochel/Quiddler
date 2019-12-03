@@ -59,6 +59,12 @@ namespace Quiddler.Controllers
             return await _gameService.MakeMove(id, move);
         }
 
+        [HttpPut("{id}/hand")]
+        public async Task<GameModel> SortHand(string id, [FromQuery] string newHand)
+        {
+            return await _gameService.SortHand(id, newHand);
+        }
+
         [HttpGet("dictionary")]
         public async Task<DictionaryModel> CheckWords([FromQuery] string words)
         {

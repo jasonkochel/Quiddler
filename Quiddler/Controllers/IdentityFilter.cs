@@ -5,7 +5,6 @@ namespace Quiddler.Controllers
 {
     public class IdentityFilter : ActionFilterAttribute
     {
-
         public override void OnActionExecuting(ActionExecutingContext context)
         {
             var userIdentity = (UserIdentity) context.HttpContext.RequestServices.GetService(typeof(UserIdentity));

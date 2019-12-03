@@ -7,11 +7,17 @@ const useStyles = makeStyles(theme => ({
   paper: {
     padding: theme.spacing(2),
     textAlign: "center"
+  },
+  yourMove: {
+    backgroundColor: "lightgreen"
+  },
+  theirMove: {
+    backgroundColor: "pink"
   }
 }));
 
 const messages = {
-  [GAMESTATUS.PENDING_TURN]: "Waiting for $ to take their turn",
+  [GAMESTATUS.PENDING_TURN]: "Waiting for $ to Play",
   [GAMESTATUS.PENDING_DISCARD]: "Discard or Go Out",
   [GAMESTATUS.PENDING_DRAW]: "Draw from Discard or Deck"
 };
@@ -21,7 +27,13 @@ const Scores = ({ game, status }) => {
 
   return (
     <Grid item xs={12}>
-      <Paper className={classes.paper}>
+      <Paper
+        className={`${classes.paper} ${
+          status === GAMESTATUS.PENDING_TURN
+            ? classes.theirMove
+            : classes.yourMove
+        }`}
+      >
         {messages[status].replace("$", game.whoseTurn)}
       </Paper>
     </Grid>

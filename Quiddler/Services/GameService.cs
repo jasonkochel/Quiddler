@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Lib.AspNetCore.ServerSentEvents;
 using Quiddler.Controllers;
 using Quiddler.Data;
 using Quiddler.Models;
@@ -18,6 +19,7 @@ namespace Quiddler.Services
         Task<GameModel> AddPlayer(string gameId);
         Task<GameModel> StartRound(string gameId);
         Task<GameModel> MakeMove(string gameId, MoveModel move);
+        Task<GameModel> SortHand(string gameId, string newHand);
 
         Task Delete(string gameId);
     }
@@ -28,21 +30,25 @@ namespace Quiddler.Services
         private readonly IDeckService _deckService;
         private readonly IDictionaryService _dictionaryService;
         private readonly UserIdentity _identity;
+        private readonly IServerSentEventsService _sseService;
+        private readonly GameMapper _mapper;
 
-        public GameService(IGameRepository repo, IDeckService deckService, IDictionaryService dictionaryService, UserIdentity identity)
+        public GameService(IGameRepository repo, IDeckService deckService, IDictionaryService dictionaryService, UserIdentity identity, IServerSentEventsService sseService, GameMapper mapper)
         {
             _repo = repo;
             _deckService = deckService;
             _dictionaryService = dictionaryService;
             _identity = identity;
+            _sseService = sseService;
+            _mapper = mapper;
         }
 
-        public async Task<GameModel> Get(string gameId) => Mapper.MapEntityToModel(await _repo.Get(gameId), _identity.Name);
+        public async Task<GameModel> Get(string gameId) => _mapper.MapEntityToModel(await _repo.Get(gameId), _identity.Name);
 
         public async Task<IEnumerable<GameListModel>> GetAll()
         {
             var games = await _repo.GetAll();
-            return games.Select(Mapper.MapEntityToListModel);
+            return games.Select(_mapper.MapEntityToListModel);
         }
 
         public async Task<GameModel> Create()
@@ -72,7 +78,7 @@ namespace Quiddler.Services
 
             await _repo.Update(game);
 
-            return Mapper.MapEntityToModel(game, _identity.Name);
+            return _mapper.MapEntityToModel(game, _identity.Name);
         }
 
         public async Task<GameModel> StartRound(string gameId)
@@ -102,7 +108,9 @@ namespace Quiddler.Services
 
             await _repo.Update(game);
 
-            return Mapper.MapEntityToModel(game, _identity.Name);
+            await _sseService.SendEventAsync(gameId);
+
+            return _mapper.MapEntityToModel(game, _identity.Name);
         }
 
         public async Task<GameModel> MakeMove(string gameId, MoveModel move)
@@ -184,7 +192,20 @@ namespace Quiddler.Services
                 }
             }
 
-            return Mapper.MapEntityToModel(game, _identity.Name);
+            await _sseService.SendEventAsync(gameId);
+
+            return _mapper.MapEntityToModel(game, _identity.Name);
+        }
+
+        public async Task<GameModel> SortHand(string gameId, string newHand)
+        {
+            var game = await _repo.Get(gameId);
+            game.Players.Single(p => p.Name == _identity.Name).Hand = newHand.Split(',').ToList();
+            await _repo.Update(game);
+
+            await _sseService.SendEventAsync($"{_identity.Name} sorted their hand: {newHand}");
+
+            return _mapper.MapEntityToModel(game, _identity.Name);
         }
 
         public async Task Delete(string gameId)

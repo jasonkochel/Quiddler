@@ -1,103 +1,156 @@
 import { Grid } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { DragDropContext } from "react-beautiful-dnd";
 import { connect } from "react-redux";
 import { GAMESTATUS, MOVETYPES } from "../const";
-import { loadGame, makeMove } from "../ducks/gameDuck";
+import { loadGame, makeMove, sortHand } from "../ducks/gameDuck";
 import Deck from "./Deck";
 import Hand from "./Hand";
 import Scores from "./Scores";
 import Status from "./Status";
 
+const reorder = (list, startIndex, endIndex) => {
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+
+  return result;
+};
+
 const useStyles = makeStyles(theme => ({
   root: {
     flexGrow: 1,
     width: "100%",
-    maxWidth: 360,
     justify: "center",
     alignItems: "flex-start"
   }
 }));
 
-const Game = ({ match, myName, game, load, move }) => {
+const eventUrl = process.env.REACT_APP_API_BASE_URL.replace("api", "sse");
+
+const Game = ({ match, myName, game, loadGame, makeMove, sortHand }) => {
   const classes = useStyles();
 
   let [gameStatus, setGameStatus] = useState();
+  let [hand, setHand] = useState();
+
+  let eventSource = useRef();
+
+  const gameId = match.params.id;
+
+  useEffect(
+    () => {
+      loadGame(gameId);
+      eventSource.current = new EventSource(eventUrl);
+      eventSource.current.onmessage = handleEvent;
+    },
+    // eslint-disable-next-line
+    [gameId]
+  );
 
   useEffect(() => {
-    load(match.params.id);
-  }, [load, match]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (false && gameStatus === GAMESTATUS.PENDING_TURN)
-        load(match.params.id);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  });
+    if (game && game.players) {
+      setHand(game.players.find(p => p.name === myName).hand);
+    }
+  }, [game, myName]);
 
   useEffect(() => {
     if (game.whoseTurn !== myName) {
       setGameStatus(GAMESTATUS.PENDING_TURN);
     } else {
-      const cardsInHand = game.players.find(p => p.name === myName).hand.length;
-      if (cardsInHand > game.cardsInRound) {
+      if (hand && hand.length > game.cardsInRound) {
         setGameStatus(GAMESTATUS.PENDING_DISCARD);
       } else {
         setGameStatus(GAMESTATUS.PENDING_DRAW);
       }
     }
-  }, [game, myName]);
+  }, [game, hand, myName]);
+
+  const handleEvent = e => {
+    if (e.data === gameId) {
+      loadGame(gameId);
+    }
+  };
 
   const handleDrawFromDiscard = () => {
     if (gameStatus === GAMESTATUS.PENDING_DRAW) {
-      move(MOVETYPES.DRAW_FROM_DISCARD);
-    } else {
-      alert("Not time to draw");
+      makeMove(MOVETYPES.DRAW_FROM_DISCARD);
     }
   };
 
   const handleDrawFromDeck = () => {
     if (gameStatus === GAMESTATUS.PENDING_DRAW) {
-      move(MOVETYPES.DRAW_FROM_DECK);
-    } else {
-      alert("Not time to draw");
+      makeMove(MOVETYPES.DRAW_FROM_DECK);
     }
   };
 
   const handleDiscard = cardToDiscard => {
     if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
-      move(MOVETYPES.DISCARD, { cardToDiscard });
-    } else {
-      alert("Not time to discard");
+      makeMove(MOVETYPES.DISCARD, { cardToDiscard });
     }
   };
 
+  const handleSortHand = (src, dst) => {
+    const newHand = reorder(hand, src, dst);
+    setHand(newHand); // locally
+    sortHand(newHand); // on server
+  };
+
+  /*
   const handleGoOut = (words, cardToDiscard) => {
     if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
-      move(MOVETYPES.GO_OUT, { words, cardToDiscard });
+      makeMove(MOVETYPES.GO_OUT, { words, cardToDiscard });
     } else {
       alert("Not time to discard");
     }
   };
+  */
 
-  if (!(game && game.players)) return null;
+  const handleDragEnd = result => {
+    if (!result.destination) {
+      return;
+    }
+
+    if (
+      result.draggableId === "shoe" &&
+      result.destination.droppableId === "hand"
+    ) {
+      handleDrawFromDeck();
+    }
+
+    if (
+      result.draggableId === "discard" &&
+      result.destination.droppableId === "hand"
+    ) {
+      handleDrawFromDiscard();
+    }
+
+    if (
+      result.source.droppableId === "hand" &&
+      result.destination.droppableId === "deck"
+    ) {
+      handleDiscard(result.draggableId);
+    }
+
+    if (
+      result.source.droppableId === "hand" &&
+      result.destination.droppableId === "hand"
+    ) {
+      handleSortHand(result.source.index, result.destination.index);
+    }
+  };
+
+  if (!(game && game.players && gameStatus && hand)) return null;
 
   return (
     <Grid className={classes.root} container spacing={0}>
       <Scores players={game.players} />
       <Status game={game} status={gameStatus} />
-      <Deck
-        discardPile={game.topOfDiscardPile}
-        onDrawFromDiscard={handleDrawFromDiscard}
-        onDrawFromDeck={handleDrawFromDeck}
-      />
-      <Hand
-        hand={game.players.find(p => p.name === myName).hand}
-        onDiscard={handleDiscard}
-        onGoOut={handleGoOut}
-      />
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
+        <Hand hand={hand} gameStatus={gameStatus} />
+      </DragDropContext>
     </Grid>
   );
 };
@@ -109,14 +162,10 @@ const mapStateToProps = state => {
   };
 };
 
-const mapDispatchToProps = dispatch => {
-  return {
-    load: id => dispatch(loadGame(id)),
-    move: (moveType, moveData) => dispatch(makeMove(moveType, moveData))
-  };
+const mapDispatchToProps = {
+  loadGame,
+  makeMove,
+  sortHand
 };
 
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Game);
+export default connect(mapStateToProps, mapDispatchToProps)(Game);

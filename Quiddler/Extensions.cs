@@ -1,8 +1,9 @@
 ﻿using System;
+using Quiddler.Models;
 
 namespace Quiddler
 {
-    public static class RandomExtensions
+    public static class Extensions
     {
         public static void Shuffle<T>(this Random rng, T[] array)
         {

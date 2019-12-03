@@ -1,10 +1,6 @@
 import api from "../api";
 import { MOVETYPES } from "../const";
 
-const AJAX_STARTED = "ajax/STARTED";
-const AJAX_SUCCESS = "ajax/SUCCESS";
-const AJAX_ERROR = "ajax/ERROR";
-
 const LIST_LOADED = "games/LIST_LOADED";
 const GAME_LOADED = "games/LOADED";
 
@@ -17,18 +13,6 @@ const initialState = {
 
 export default (state = initialState, action) => {
   switch (action.type) {
-    case AJAX_STARTED:
-      state = { ...state, loading: true, error: null };
-      break;
-
-    case AJAX_SUCCESS:
-      state = { ...state, loading: false };
-      break;
-
-    case AJAX_ERROR:
-      state = { ...state, loading: false, error: action.payload };
-      break;
-
     case LIST_LOADED:
       state = {
         ...state,
@@ -51,77 +35,58 @@ export default (state = initialState, action) => {
 
 export const loadList = () => {
   return async dispatch => {
-    dispatch({ type: AJAX_STARTED });
-    try {
-      var res = await api.get("games");
-      dispatch({ type: AJAX_SUCCESS });
-      dispatch({ type: LIST_LOADED, payload: res.data });
-    } catch (err) {
-      dispatch({ type: AJAX_ERROR, payload: err.message });
-    }
+    var res = await api.get("games");
+    dispatch({ type: LIST_LOADED, payload: res.data });
   };
 };
 
 export const loadGame = id => {
   return async dispatch => {
-    dispatch({ type: AJAX_STARTED });
-    try {
-      var res = await api.get(`games/${id}`);
-      dispatch({ type: AJAX_SUCCESS });
-      dispatch({ type: GAME_LOADED, payload: res.data });
-    } catch (err) {
-      dispatch({ type: AJAX_ERROR, payload: err.message });
-    }
+    var res = await api.get(`games/${id}`);
+    dispatch({ type: GAME_LOADED, payload: res.data });
   };
 };
 
 export const createGame = () => {
   return async dispatch => {
-    dispatch({ type: AJAX_STARTED });
-    try {
-      await api.post("games");
-      var res = await api.get("games");
-      dispatch({ type: AJAX_SUCCESS });
-      dispatch({ type: LIST_LOADED, payload: res.data });
-    } catch (err) {
-      dispatch({ type: AJAX_ERROR, payload: err.message });
-    }
+    await api.post("games");
+    var res = await api.get("games");
+    dispatch({ type: LIST_LOADED, payload: res.data });
   };
 };
 
 export const joinGame = id => {
   return async dispatch => {
-    dispatch({ type: AJAX_STARTED });
-    try {
-      var res = await api.post(`games/${id}/players?startGame=true`);
-      dispatch({ type: AJAX_SUCCESS });
-      dispatch({ type: GAME_LOADED, payload: res.data });
-    } catch (err) {
-      dispatch({ type: AJAX_ERROR, payload: err.message });
-    }
+    var res = await api.post(`games/${id}/players?startGame=true`);
+    dispatch({ type: GAME_LOADED, payload: res.data });
+  };
+};
+
+export const sortHand = newHand => {
+  return async (dispatch, getState) => {
+    const id = getState().game.game.gameId;
+    const data = newHand.map(c => c.cardId);
+    await api.put(`games/${id}/hand?newHand=${data.toString()}`);
+
+    //var res = await api.put(`games/${id}/hand?newHand=${data.toString()}`);
+    //dispatch({ type: GAME_LOADED, payload: res.data });
   };
 };
 
 export const makeMove = (moveType, moveData) => {
   return async (dispatch, getState) => {
-    dispatch({ type: AJAX_STARTED });
-    try {
-      const id = getState().game.game.gameId;
+    const id = getState().game.game.gameId;
 
-      const move = {
-        type: moveType,
-        discard:
-          moveType === MOVETYPES.DISCARD || moveType === MOVETYPES.GO_OUT
-            ? moveData.cardToDiscard
-            : null,
-        words: moveType === MOVETYPES.GO_OUT ? moveData.words : null
-      };
+    const move = {
+      type: moveType,
+      discard:
+        moveType === MOVETYPES.DISCARD || moveType === MOVETYPES.GO_OUT
+          ? moveData.cardToDiscard
+          : null,
+      words: moveType === MOVETYPES.GO_OUT ? moveData.words : null
+    };
 
-      var res = await api.put(`games/${id}`, move);
-      dispatch({ type: AJAX_SUCCESS });
-      dispatch({ type: GAME_LOADED, payload: res.data });
-    } catch (err) {
-      dispatch({ type: AJAX_ERROR, payload: err.message });
-    }
+    var res = await api.put(`games/${id}`, move);
+    dispatch({ type: GAME_LOADED, payload: res.data });
   };
 };
