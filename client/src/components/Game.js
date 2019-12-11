@@ -1,22 +1,15 @@
-import { Grid } from "@material-ui/core";
+import { Fab, Grid } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import React, { useEffect, useRef, useState } from "react";
+import _ from "lodash";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
-import { connect } from "react-redux";
+import { loadGame, makeMove, sortHand } from "../api";
 import { GAMESTATUS, MOVETYPES } from "../const";
-import { loadGame, makeMove, sortHand } from "../ducks/gameDuck";
 import Deck from "./Deck";
 import Hand from "./Hand";
 import Scores from "./Scores";
 import Status from "./Status";
-
-const reorder = (list, startIndex, endIndex) => {
-  const result = Array.from(list);
-  const [removed] = result.splice(startIndex, 1);
-  result.splice(endIndex, 0, removed);
-
-  return result;
-};
+import Words from "./Words";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -24,16 +17,31 @@ const useStyles = makeStyles(theme => ({
     width: "100%",
     justify: "center",
     alignItems: "flex-start"
+  },
+  fab: {
+    position: "absolute",
+    bottom: theme.spacing(2),
+    right: theme.spacing(2)
   }
 }));
 
 const eventUrl = process.env.REACT_APP_API_BASE_URL.replace("api", "sse");
 
-const Game = ({ match, myName, game, loadGame, makeMove, sortHand }) => {
+const swapArrayElements = (list, startIndex, endIndex) => {
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+
+  return result;
+};
+
+const Game = ({ match, auth }) => {
   const classes = useStyles();
 
-  let [gameStatus, setGameStatus] = useState();
+  let [game, setGame] = useState();
   let [hand, setHand] = useState();
+  let [goingOut, setGoingOut] = useState(false);
+  let [words, setWords] = useState();
 
   let eventSource = useRef();
 
@@ -41,7 +49,13 @@ const Game = ({ match, myName, game, loadGame, makeMove, sortHand }) => {
 
   useEffect(
     () => {
-      loadGame(gameId);
+      const asyncEffect = async () => {
+        loadGame(gameId).then(res => {
+          setState(res);
+        });
+      };
+
+      asyncEffect();
       eventSource.current = new EventSource(eventUrl);
       eventSource.current.onmessage = handleEvent;
     },
@@ -49,73 +63,122 @@ const Game = ({ match, myName, game, loadGame, makeMove, sortHand }) => {
     [gameId]
   );
 
-  useEffect(() => {
-    if (game && game.players) {
-      setHand(game.players.find(p => p.name === myName).hand);
-    }
-  }, [game, myName]);
+  const gameStatus = useMemo(() => {
+    if (!game) return;
 
-  useEffect(() => {
-    if (game.whoseTurn !== myName) {
-      setGameStatus(GAMESTATUS.PENDING_TURN);
+    if (game.whoseTurn !== auth.name) {
+      return GAMESTATUS.PENDING_TURN;
     } else {
-      if (hand && hand.length > game.cardsInRound) {
-        setGameStatus(GAMESTATUS.PENDING_DISCARD);
+      if (hand.length > game.cardsInRound) {
+        return GAMESTATUS.PENDING_DISCARD;
       } else {
-        setGameStatus(GAMESTATUS.PENDING_DRAW);
+        return GAMESTATUS.PENDING_DRAW;
       }
     }
-  }, [game, hand, myName]);
+  }, [game, hand, auth]);
+
+  const setState = game => {
+    setHand(game.players.find(p => p.name === auth.name).hand);
+    setGame(game);
+  };
 
   const handleEvent = e => {
     if (e.data === gameId) {
-      loadGame(gameId);
+      loadGame(gameId).then(res => setState(res));
     }
   };
 
   const handleDrawFromDiscard = () => {
     if (gameStatus === GAMESTATUS.PENDING_DRAW) {
-      makeMove(MOVETYPES.DRAW_FROM_DISCARD);
+      makeMove(gameId, MOVETYPES.DRAW_FROM_DISCARD).then(res => setState(res));
     }
   };
 
   const handleDrawFromDeck = () => {
     if (gameStatus === GAMESTATUS.PENDING_DRAW) {
-      makeMove(MOVETYPES.DRAW_FROM_DECK);
+      makeMove(gameId, MOVETYPES.DRAW_FROM_DECK).then(res => setState(res));
     }
   };
 
-  const handleDiscard = cardToDiscard => {
+  const handleDiscard = card => {
     if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
-      makeMove(MOVETYPES.DISCARD, { cardToDiscard });
+      if (goingOut) {
+        // TODO: if going out, check words, and if words are valid
+        //makeMove(MOVETYPES.GO_OUT, { words.words, card });
+      } else {
+        makeMove(gameId, MOVETYPES.DISCARD, { card }).then(res => setState(res));
+      }
     }
   };
 
   const handleSortHand = (src, dst) => {
-    const newHand = reorder(hand, src, dst);
-    setHand(newHand); // locally
-    sortHand(newHand); // on server
+    const newHand = swapArrayElements(hand, src, dst);
+
+    // set local state so UI is immediately updated
+    setHand(newHand);
+
+    // save new hand to server and get it back to re-render properly
+    sortHand(gameId, newHand).then(res => setState(res));
   };
 
-  /*
-  const handleGoOut = (words, cardToDiscard) => {
-    if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
-      makeMove(MOVETYPES.GO_OUT, { words, cardToDiscard });
-    } else {
-      alert("Not time to discard");
+  const handleMakeWord = (cardId, source, destination) => {
+    let newHand = _.cloneDeep(words.hand);
+    let newWords = _.cloneDeep(words.words);
+    let card;
+
+    if (source.droppableId === "hand") {
+      card = _.remove(newHand, c => c.cardId === cardId);
     }
+    if (source.droppableId.startsWith("word")) {
+      const i = parseInt(source.droppableId.substring(5));
+      card = _.remove(newWords[i], c => c.cardId === cardId);
+    }
+
+    // "card" is now a one-element array of the card that was dropped, so the card object itself is card[0]
+
+    if (destination.droppableId === "hand") {
+      newHand.splice(destination.index, 0, card[0]);
+    }
+    if (destination.droppableId.startsWith("word")) {
+      if (destination.droppableId === "word-new") {
+        newWords.push(card);
+      } else {
+        const i = parseInt(destination.droppableId.substring(5));
+        newWords[i].splice(destination.index, 0, card[0]);
+      }
+    }
+
+    setWords({
+      hand: newHand,
+      words: newWords
+    });
   };
-  */
+
+  const handleStartToGoOut = () => {
+    setGoingOut(true);
+    setWords({
+      hand,
+      words: [
+        /* sample seed data for testing
+        [
+          { cardId: "A-99", letter: "A", value: 0 },
+          { cardId: "B-99", letter: "B", value: 0 }
+        ],
+        [
+          { cardId: "C-99", letter: "C", value: 0 },
+          { cardId: "D-99", letter: "D", value: 0 }
+        ]
+        */
+      ]
+    });
+  };
 
   const handleDragEnd = result => {
     if (!result.destination) {
       return;
     }
 
-    if (
-      result.draggableId === "shoe" &&
-      result.destination.droppableId === "hand"
-    ) {
+    if (result.draggableId === "shoe" && result.destination.droppableId === "hand") {
       handleDrawFromDeck();
     }
 
@@ -139,9 +202,13 @@ const Game = ({ match, myName, game, loadGame, makeMove, sortHand }) => {
     ) {
       handleSortHand(result.source.index, result.destination.index);
     }
+
+    if (result.destination.droppableId.startsWith("word")) {
+      handleMakeWord(result.draggableId, result.source, result.destination);
+    }
   };
 
-  if (!(game && game.players && gameStatus && hand)) return null;
+  if (!game) return null;
 
   return (
     <Grid className={classes.root} container spacing={0}>
@@ -149,23 +216,21 @@ const Game = ({ match, myName, game, loadGame, makeMove, sortHand }) => {
       <Status game={game} status={gameStatus} />
       <DragDropContext onDragEnd={handleDragEnd}>
         <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
-        <Hand hand={hand} gameStatus={gameStatus} />
+        <Hand hand={goingOut ? words.hand : hand} gameStatus={gameStatus} />
+        {gameStatus === GAMESTATUS.PENDING_DISCARD && !goingOut && (
+          <Fab
+            variant="extended"
+            color="primary"
+            className={classes.fab}
+            onClick={handleStartToGoOut}
+          >
+            Go Out
+          </Fab>
+        )}
+        {goingOut && <Words words={words.words} />}
       </DragDropContext>
     </Grid>
   );
 };
 
-const mapStateToProps = state => {
-  return {
-    myName: state.auth.name,
-    game: state.game.game
-  };
-};
-
-const mapDispatchToProps = {
-  loadGame,
-  makeMove,
-  sortHand
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(Game);
+export default Game;

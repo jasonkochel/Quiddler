@@ -1,12 +1,21 @@
+import jwt from "jsonwebtoken";
 import React from "react";
 import { GoogleLogin } from "react-google-login";
-import { connect } from "react-redux";
 import { Redirect } from "react-router-dom";
-import { login, tokenIsValid } from "../ducks/authDuck";
 
 const googleCallbackUrl = process.env.REACT_APP_API_BASE_URL + "/auth/google";
 
-const Login = ({ auth, login }) => {
+const tokenIsValid = token => {
+  if (token) {
+    var decodedToken = jwt.decode(token);
+    var dateNow = new Date();
+    if (decodedToken.exp > dateNow.getTime() / 1000) return true;
+    else return false;
+  }
+  return false;
+};
+
+const Login = ({ auth, setAuth }) => {
   const onFailure = error => {
     alert(error);
   };
@@ -22,14 +31,20 @@ const Login = ({ auth, login }) => {
       mode: "cors",
       cache: "default"
     };
-    fetch(googleCallbackUrl, options).then(r => {
-      r.json().then(result => {
-        login(result.token);
+    fetch(googleCallbackUrl, options).then(resp => {
+      resp.json().then(result => {
+        const token = result.token;
+        const name = jwt.decode(token).name;
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("name", name);
+
+        setAuth({ token, name });
       });
     });
   };
 
-  return tokenIsValid(auth.token) ? (
+  return auth && tokenIsValid(auth.token) ? (
     <Redirect to="/games" />
   ) : (
     <GoogleLogin
@@ -41,17 +56,4 @@ const Login = ({ auth, login }) => {
   );
 };
 
-const mapStateToProps = state => {
-  return {
-    auth: state.auth
-  };
-};
-
-const mapDispatchToProps = {
-  login
-};
-
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(Login);
+export default Login;

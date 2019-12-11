@@ -46,27 +46,31 @@ const Deck = ({ discardPile, gameStatus }) => {
           ref={provided.innerRef}
           {...provided.droppableProps}
         >
-          <Draggable
-            draggableId="discard"
-            index={0}
-            isDragDisabled={gameStatus !== GAMESTATUS.PENDING_DRAW}
-          >
-            {provided => (
-              <Card
-                className={classes.card}
-                ref={provided.innerRef}
-                {...provided.draggableProps}
-                {...provided.dragHandleProps}
-              >
-                <CardContent>
-                  <div className={classes.cardLetter}>{discardPile.letter}</div>
-                  <Typography color="textSecondary">
-                    {discardPile.value}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
-          </Draggable>
+          {discardPile && (
+            <Draggable
+              draggableId="discard"
+              index={0}
+              isDragDisabled={gameStatus !== GAMESTATUS.PENDING_DRAW}
+            >
+              {provided => (
+                <Card
+                  className={classes.card}
+                  ref={provided.innerRef}
+                  {...provided.draggableProps}
+                  {...provided.dragHandleProps}
+                >
+                  <CardContent>
+                    <div className={classes.cardLetter}>
+                      {discardPile.letter}
+                    </div>
+                    <Typography color="textSecondary">
+                      {discardPile.value}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              )}
+            </Draggable>
+          )}
           <Draggable
             draggableId="shoe"
             index={1}

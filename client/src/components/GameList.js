@@ -7,9 +7,8 @@ import {
   ListSubheader
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import React, { useEffect } from "react";
-import { connect } from "react-redux";
-import { createGame, joinGame, loadList } from "../ducks/gameDuck";
+import React, { useEffect, useState } from "react";
+import { createGame, joinGame, loadList } from "../api";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -19,15 +18,28 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const GameList = ({ history, myName, games, getAll, create, join }) => {
+const GameList = ({ history, auth }) => {
   const classes = useStyles();
+  const [games, setGames] = useState();
 
   useEffect(() => {
-    getAll();
-  }, [getAll]);
+    const asyncEffect = async () => {
+      setGames(await loadList());
+    };
 
-  const handleJoinGame = id => join(id).then(() => handlePlayGame(id));
+    asyncEffect();
+  }, []);
+
   const handlePlayGame = id => history.push(`/games/${id}`);
+
+  const handleJoinGame = id => joinGame(id).then(() => handlePlayGame(id));
+
+  const handleCreateGame = () =>
+    createGame()
+      .then(() => loadList())
+      .then(res => setGames(res));
+
+  if (!games) return null;
 
   return (
     <div className={classes.root}>
@@ -46,7 +58,7 @@ const GameList = ({ history, myName, games, getAll, create, join }) => {
               secondary={g.hasStarted ? null : "Not Started"}
             />
             <ListItemSecondaryAction>
-              {g.players.includes(myName) ? (
+              {g.players.includes(auth.name) ? (
                 <Button onClick={() => handlePlayGame(g.gameId)}>Play</Button>
               ) : (
                 <Button onClick={() => handleJoinGame(g.gameId)}>Join</Button>
@@ -55,27 +67,9 @@ const GameList = ({ history, myName, games, getAll, create, join }) => {
           </ListItem>
         ))}
       </List>
-      <Button onClick={create}>New Game</Button>
+      <Button onClick={handleCreateGame}>New Game</Button>
     </div>
   );
 };
 
-const mapStateToProps = state => {
-  return {
-    myName: state.auth.name,
-    games: state.game.gameList
-  };
-};
-
-const mapDispatchToProps = dispatch => {
-  return {
-    getAll: () => dispatch(loadList()),
-    create: () => dispatch(createGame()),
-    join: id => dispatch(joinGame(id))
-  };
-};
-
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(GameList);
+export default GameList;
