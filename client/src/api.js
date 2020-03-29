@@ -60,4 +60,9 @@ const makeMove = async (gameId, moveType, moveData) => {
   return res.data;
 };
 
-export { loadList, createGame, joinGame, loadGame, sortHand, makeMove };
+const checkWords = async words => {
+  var res = await api.get(`games/dictionary?words=${words.toString()}`);
+  return res.data;
+};
+
+export { loadList, createGame, joinGame, loadGame, sortHand, makeMove, checkWords };

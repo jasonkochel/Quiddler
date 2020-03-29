@@ -3,8 +3,8 @@ import { makeStyles } from "@material-ui/core/styles";
 import _ from "lodash";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
-import { loadGame, makeMove, sortHand } from "../api";
-import { GAMESTATUS, MOVETYPES } from "../const";
+import { checkWords, loadGame, makeMove, sortHand } from "../api";
+import { GAMESTATUS, GOINGOUTSTATUS, MOVETYPES } from "../const";
 import Deck from "./Deck";
 import Hand from "./Hand";
 import Scores from "./Scores";
@@ -40,8 +40,7 @@ const Game = ({ match, auth }) => {
 
   let [game, setGame] = useState();
   let [hand, setHand] = useState();
-  let [goingOut, setGoingOut] = useState(false);
-  let [words, setWords] = useState();
+  let [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
 
   let eventSource = useRef();
 
@@ -78,7 +77,13 @@ const Game = ({ match, auth }) => {
   }, [game, hand, auth]);
 
   const setState = game => {
-    setHand(game.players.find(p => p.name === auth.name).hand);
+    const me = game.players.find(p => p.name === auth.name);
+    setGoingOut({
+      status: me.isGoingOut ? GOINGOUTSTATUS.GONE : GOINGOUTSTATUS.NONE,
+      hand: [],
+      words: me.words
+    });
+    setHand(me.hand);
     setGame(game);
   };
 
@@ -100,13 +105,36 @@ const Game = ({ match, auth }) => {
     }
   };
 
-  const handleDiscard = card => {
+  const handleDiscard = async card => {
     if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
-      if (goingOut) {
-        // TODO: if going out, check words, and if words are valid
-        //makeMove(MOVETYPES.GO_OUT, { words.words, card });
+      if (goingOut.status === GOINGOUTSTATUS.GOING) { // TODO: or, someone else has gone out, so you gotta
+        if (goingOut.hand.length !== 1) { // TODO: not if someone else has already gone out
+          alert("must use all letters before going out");
+          return;
+        }
+
+        var wordStrings = goingOut.words.map(word =>
+          word.map(c => c.letter).join("")
+        );
+
+        var checkedWords = await checkWords(wordStrings);
+
+        if (checkedWords.invalidWords?.length > 0) {
+          alert(checkedWords.invalidWords.join(","));
+          return;
+        }
+
+        makeMove(gameId, MOVETYPES.GO_OUT, {
+          cardToDiscard: card,
+          words: wordStrings
+        }).then(res => {
+          setGoingOut({ ...goingOut, status: GOINGOUTSTATUS.GONE });
+          setState(res);
+        });
       } else {
-        makeMove(gameId, MOVETYPES.DISCARD, { card }).then(res => setState(res));
+        makeMove(gameId, MOVETYPES.DISCARD, { cardToDiscard: card }).then(res =>
+          setState(res)
+        );
       }
     }
   };
@@ -122,8 +150,8 @@ const Game = ({ match, auth }) => {
   };
 
   const handleMakeWord = (cardId, source, destination) => {
-    let newHand = _.cloneDeep(words.hand);
-    let newWords = _.cloneDeep(words.words);
+    let newHand = _.cloneDeep(goingOut.hand);
+    let newWords = _.cloneDeep(goingOut.words);
     let card;
 
     if (source.droppableId === "hand") {
@@ -148,29 +176,15 @@ const Game = ({ match, auth }) => {
       }
     }
 
-    setWords({
+    setGoingOut({
+      status: GOINGOUTSTATUS.GOING,
       hand: newHand,
       words: newWords
     });
   };
 
   const handleStartToGoOut = () => {
-    setGoingOut(true);
-    setWords({
-      hand,
-      words: [
-        /* sample seed data for testing
-        [
-          { cardId: "A-99", letter: "A", value: 0 },
-          { cardId: "B-99", letter: "B", value: 0 }
-        ],
-        [
-          { cardId: "C-99", letter: "C", value: 0 },
-          { cardId: "D-99", letter: "D", value: 0 }
-        ]
-        */
-      ]
-    });
+    setGoingOut({ status: GOINGOUTSTATUS.GOING, hand, words: [] });
   };
 
   const handleDragEnd = result => {
@@ -216,18 +230,27 @@ const Game = ({ match, auth }) => {
       <Status game={game} status={gameStatus} />
       <DragDropContext onDragEnd={handleDragEnd}>
         <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
-        <Hand hand={goingOut ? words.hand : hand} gameStatus={gameStatus} />
-        {gameStatus === GAMESTATUS.PENDING_DISCARD && !goingOut && (
-          <Fab
-            variant="extended"
-            color="primary"
-            className={classes.fab}
-            onClick={handleStartToGoOut}
-          >
-            Go Out
-          </Fab>
+        <Hand
+          hand={goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand}
+          gameStatus={gameStatus}
+        />
+        {gameStatus === GAMESTATUS.PENDING_DISCARD &&
+          goingOut.status === GOINGOUTSTATUS.NONE && (
+            <Fab
+              variant="extended"
+              color="primary"
+              className={classes.fab}
+              onClick={handleStartToGoOut}
+            >
+              Go Out
+            </Fab>
+          )}
+        {goingOut.status === GOINGOUTSTATUS.GOING && (
+          <Words words={goingOut.words} />
         )}
-        {goingOut && <Words words={words.words} />}
+        {goingOut.status === GOINGOUTSTATUS.GONE && (
+          <span>{goingOut.words.toString()}</span>
+        )}
       </DragDropContext>
     </Grid>
   );

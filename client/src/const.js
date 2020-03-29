@@ -11,7 +11,8 @@ export const GAMESTATUS = {
   PENDING_DISCARD: "PENDING_DISCARD"
 };
 
-export const CARDVALUES = {
-  A: 1,
-  B: 4
-};
+export const GOINGOUTSTATUS = { 
+  NONE: "NONE",
+  GOING: "GOING",
+  GONE: "GONE"
+}

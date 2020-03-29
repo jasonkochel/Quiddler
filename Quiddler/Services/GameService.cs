@@ -68,7 +68,7 @@ namespace Quiddler.Services
         {
             var game = await _repo.Get(gameId);
             var newPlayerName = _identity.Name;
-            
+
             if (game.Players.Any(p => p.Name == newPlayerName))
             {
                 throw new Exception($"Player '{newPlayerName}' is already part of this game");
@@ -85,12 +85,16 @@ namespace Quiddler.Services
         {
             var game = await _repo.Get(gameId);
 
-            // Starting game for first time
-            if (game.Round == null) game.Round = 1;
+            game.Round = game.Round == null ? 1 : game.Round + 1;
 
             var deck = _deckService.GenerateShuffled();
 
-            game.Players.ForEach(p => p.Hand = new List<string>());
+            game.Players.ForEach(p =>
+            {
+                p.Hand = new List<string>();
+                p.IsGoingOut = false;
+                p.Words = null;
+            });
 
             for (var i = 0; i < game.Round + 2; i++)
             {
@@ -107,7 +111,6 @@ namespace Quiddler.Services
             game.Turn = game.Round.Value % game.Players.Count;
 
             await _repo.Update(game);
-
             await _sseService.SendEventAsync(gameId);
 
             return _mapper.MapEntityToModel(game, _identity.Name);
@@ -144,7 +147,12 @@ namespace Quiddler.Services
                     break;
 
                 case MoveType.GoOut:
-                    var validatedWords = await _dictionaryService.CheckWords(move.Words.ToArray());
+                    if (!game.Players[game.Turn].Hand.Contains(move.Discard))
+                    {
+                        throw new Exception($"Cannot discard '{move.Discard}' because it is not in your hand");
+                    }
+
+                    var validatedWords = await _dictionaryService.CheckWords(move.Words);
                     if (validatedWords.InvalidWords.Any())
                     {
                         throw new Exception($"One or more words are invalid: {validatedWords.InvalidWords}");
@@ -161,7 +169,10 @@ namespace Quiddler.Services
                         }
                     }
 
-                    var score = move.Words.Sum(_deckService.GetWordValue);
+                    game.Players[game.Turn].Hand.Remove(move.Discard);
+
+                    var score = move.Words.Sum(_deckService.GetWordValue) -
+                                game.Players[game.Turn].Hand.Sum(c => _deckService.ToCardModel(c).Value);
 
                     Debug.Assert(game.Round != null, "game.Round != null");
 
@@ -183,17 +194,16 @@ namespace Quiddler.Services
 
             if (move.Type == MoveType.GoOut)
             {
-                var lastOneOut = game.Players.All(p => p.IsGoingOut);
-
-                if (lastOneOut)
+                var roundOver = game.Players.All(p => p.IsGoingOut);
+                if (roundOver)
                 {
-                    game.Round++;
                     return await StartRound(game.GameId);
                 }
             }
 
-            await _sseService.SendEventAsync(gameId);
+            await _repo.Update(game);
 
+            await _sseService.SendEventAsync(gameId);
             return _mapper.MapEntityToModel(game, _identity.Name);
         }
 
@@ -202,9 +212,6 @@ namespace Quiddler.Services
             var game = await _repo.Get(gameId);
             game.Players.Single(p => p.Name == _identity.Name).Hand = newHand.Split(',').ToList();
             await _repo.Update(game);
-
-            await _sseService.SendEventAsync($"{_identity.Name} sorted their hand: {newHand}");
-
             return _mapper.MapEntityToModel(game, _identity.Name);
         }
 

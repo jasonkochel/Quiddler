@@ -53,10 +53,12 @@ namespace Quiddler.Services
             }
 
             var client = _clientFactory.CreateClient();
+            var request = new HttpRequestMessage(HttpMethod.Get, $"https://wordsapiv1.p.rapidapi.com/words/{word}/typeOf");
 
-            var request = new HttpRequestMessage(HttpMethod.Get, $"https://owlbot.info/api/v3/dictionary/{word}");
-
-            request.Headers.Authorization = new AuthenticationHeaderValue("Token", _settings.Value.OwlBotToken);
+            // ReSharper disable StringLiteralTypo
+            request.Headers.Add("x-rapidapi-host", "wordsapiv1.p.rapidapi.com");
+            request.Headers.Add("x-rapidapi-key", "1ZD6mPRyS6msh9YefeGaUJLxjULMp1yyx4mjsnCUIOIzAXGFlF");
+            // ReSharper restore StringLiteralTypo
 
             var response = await client.SendAsync(request);
             valid = response.IsSuccessStatusCode;
