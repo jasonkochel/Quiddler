@@ -1,13 +1,9 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using QuiddlerApi.Interfaces;
 using QuiddlerApi.Models;
 
 namespace QuiddlerApi.Services;
-
-public interface IDictionaryService
-{
-    Task<DictionaryModel> CheckWords(IEnumerable<string> words);
-}
 
 public class DictionaryService : IDictionaryService
 {

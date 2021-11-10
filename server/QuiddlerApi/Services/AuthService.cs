@@ -1,13 +1,8 @@
 ﻿using System.Text.Json;
+using QuiddlerApi.Interfaces;
 using QuiddlerApi.Models;
 
 namespace QuiddlerApi.Services;
-
-public interface IAuthService
-{
-    UserModel Authenticate(GoogleJsonWebSignaturePayload payload);
-    Task<GoogleJsonWebSignaturePayload> ValidateGoogleJwtAsync(string token);
-}
 
 public class AuthService : IAuthService
 {

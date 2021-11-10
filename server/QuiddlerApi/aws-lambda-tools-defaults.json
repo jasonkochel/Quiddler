@@ -1,0 +1,12 @@
+
+{
+    "profile" : "default",
+    "region"  : "us-east-1",
+    "configuration" : "Release",
+    "framework"     : "net6.0",
+    "msbuild-parameters" : "--self-contained true /p:AssemblyName=bootstrap",
+    "stack-name"         : "QuiddlerApi",
+    "template"           : "serverless.template",
+    "s3-bucket"          : "jason_kochel",
+    "s3-prefix"          : "QuiddlerApi/"
+}

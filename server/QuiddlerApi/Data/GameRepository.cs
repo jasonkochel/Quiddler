@@ -1,16 +1,8 @@
 ﻿using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using QuiddlerApi.Interfaces;
 
 namespace QuiddlerApi.Data;
-
-public interface IGameRepository
-{
-    Task<IEnumerable<Game>> GetAll();
-    Task<Game> Get(string id);
-    Task<string> Create(Game game);
-    Task Update(Game game);
-    Task Delete(string id);
-}
 
 public class GameRepository : IGameRepository
 {

@@ -1,4 +1,5 @@
 ﻿using QuiddlerApi.Data;
+using QuiddlerApi.Interfaces;
 using QuiddlerApi.Services;
 
 namespace QuiddlerApi.Models;

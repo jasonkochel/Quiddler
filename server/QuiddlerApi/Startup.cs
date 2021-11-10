@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using QuiddlerApi.Controllers;
 using QuiddlerApi.Data;
+using QuiddlerApi.Interfaces;
 using QuiddlerApi.Models;
 using QuiddlerApi.Services;
 

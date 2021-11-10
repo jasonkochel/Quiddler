@@ -8,6 +8,7 @@ using QuiddlerApi.Services;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using QuiddlerApi.Interfaces;
 
 namespace QuiddlerApi.Controllers;
 

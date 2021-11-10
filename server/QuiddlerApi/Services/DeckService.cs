@@ -1,13 +1,7 @@
-﻿using QuiddlerApi.Models;
+﻿using QuiddlerApi.Interfaces;
+using QuiddlerApi.Models;
 
 namespace QuiddlerApi.Services;
-
-public interface IDeckService
-{
-    Stack<string> GenerateShuffled();
-    int GetWordValue(string word);
-    CardModel ToCardModel(string card);
-}
 
 public abstract class BaseDeckService : IDeckService
 {
