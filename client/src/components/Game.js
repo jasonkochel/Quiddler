@@ -25,7 +25,7 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const eventUrl = process.env.REACT_APP_API_BASE_URL.replace("api", "sse");
+const eventUrl = process.env.REACT_APP_API_BASE_URL.replace("/api", "/sse");
 
 const swapArrayElements = (list, startIndex, endIndex) => {
   const result = Array.from(list);
