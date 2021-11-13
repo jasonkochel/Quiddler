@@ -1,7 +1,21 @@
-﻿using Amazon.DynamoDBv2.DataModel;
+﻿using System.Security.Cryptography.X509Certificates;
+using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 
 namespace QuiddlerApi.Data;
+
+[DynamoDBTable("WsConnections")]
+public class WsConnection
+{
+    [DynamoDBHashKey]
+    [DynamoDBProperty("PK")]
+    public string Channel { get; set; }
+
+    [DynamoDBRangeKey]
+    [DynamoDBProperty("SK")]
+    public string ConnectionId { get; set; }
+}
+
 
 [DynamoDBTable("QuiddlerGames")]
 public class Game

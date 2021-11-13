@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using Lib.AspNetCore.ServerSentEvents;
 using QuiddlerApi.Controllers;
 using QuiddlerApi.Data;
 using QuiddlerApi.Interfaces;
@@ -12,18 +11,20 @@ public class GameService : IGameService
     private readonly IGameRepository _repo;
     private readonly IDeckService _deckService;
     private readonly IDictionaryService _dictionaryService;
+    private readonly IWsService _wsService;
+
     private readonly UserIdentity _identity;
-    private readonly IServerSentEventsService _sseService;
     private readonly GameMapper _mapper;
 
-    public GameService(IGameRepository repo, IDeckService deckService, IDictionaryService dictionaryService, UserIdentity identity, IServerSentEventsService sseService, GameMapper mapper)
+    public GameService(IGameRepository repo, IDeckService deckService, IDictionaryService dictionaryService,
+        UserIdentity identity, GameMapper mapper, IWsService wsService)
     {
         _repo = repo;
         _deckService = deckService;
         _dictionaryService = dictionaryService;
         _identity = identity;
-        _sseService = sseService;
         _mapper = mapper;
+        _wsService = wsService;
     }
 
     public async Task<GameModel> Get(string gameId) => _mapper.MapEntityToModel(await _repo.Get(gameId), _identity.Name);
@@ -94,7 +95,8 @@ public class GameService : IGameService
         game.Turn = game.Round.Value % game.Players.Count;
 
         await _repo.Update(game);
-        await _sseService.SendEventAsync(gameId);
+
+        await _wsService.SendMessageToChannel("Update Available", gameId);
 
         return _mapper.MapEntityToModel(game, _identity.Name);
     }
@@ -186,7 +188,8 @@ public class GameService : IGameService
 
         await _repo.Update(game);
 
-        await _sseService.SendEventAsync(gameId);
+        await _wsService.SendMessageToChannel("Update Available", gameId);
+
         return _mapper.MapEntityToModel(game, _identity.Name);
     }
 

@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
+using Amazon.ApiGatewayManagementApi;
 using Amazon.DynamoDBv2;
-using Lib.AspNetCore.ServerSentEvents;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using QuiddlerApi.Controllers;
@@ -32,7 +32,6 @@ public class Startup
         services.AddControllers();
         services.AddMemoryCache();
         services.AddHttpClient();
-        services.AddServerSentEvents();
 
         services.AddOptions();
         services.Configure<AppSettings>(Configuration);
@@ -64,9 +63,13 @@ public class Startup
         services.AddSingleton<GameMapper, GameMapper>();
 
         services.AddScoped<UserIdentity, UserIdentity>();
-        services.AddScoped<IGameService, GameService>();
-        services.AddScoped<IGameRepository, GameRepository>();
+
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IGameService, GameService>();
+        services.AddScoped<IWsService, WsService>();
+
+        services.AddScoped<IGameRepository, GameRepository>();
+        services.AddScoped<IWsConnectionRepository, WsConnectionRepository>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -75,13 +78,8 @@ public class Startup
         {
             app.UseDeveloperExceptionPage();
         }
-        else
-        {
-            // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-            app.UseHsts();
-        }
 
-        app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()); //.AllowCredentials());
+        app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
         app.UseRouting();
 
         app.UseAuthentication();
@@ -91,7 +89,6 @@ public class Startup
 
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapServerSentEvents("/sse");
             endpoints.MapControllers();
         });
     }
