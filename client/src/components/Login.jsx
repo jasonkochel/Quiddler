@@ -5,7 +5,7 @@ import { Navigate } from "react-router-dom";
 
 const googleCallbackUrl = import.meta.env.VITE_API_BASE_URL + "/auth/google";
 
-const tokenIsValid = token => {
+const tokenIsValid = (token) => {
   if (token) {
     var decodedToken = jwt_decode(token);
     var dateNow = new Date();
@@ -16,11 +16,12 @@ const tokenIsValid = token => {
 };
 
 const Login = ({ auth, setAuth }) => {
-  const onFailure = error => {
-    alert(error);
+  const onFailure = (error) => {
+    console.error(error);
+    alert("Login failed; see error console");
   };
 
-  const googleResponse = response => {
+  const googleResponse = (response) => {
     const tokenBlob = new Blob(
       [JSON.stringify({ tokenId: response.tokenId }, null, 2)],
       { type: "application/json" }
@@ -29,10 +30,10 @@ const Login = ({ auth, setAuth }) => {
       method: "POST",
       body: tokenBlob,
       mode: "cors",
-      cache: "default"
+      cache: "default",
     };
-    fetch(googleCallbackUrl, options).then(resp => {
-      resp.json().then(result => {
+    fetch(googleCallbackUrl, options).then((resp) => {
+      resp.json().then((result) => {
         const token = result.token;
         const name = jwt_decode(token).name;
 

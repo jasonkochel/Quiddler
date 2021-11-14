@@ -4,6 +4,7 @@ import _ from "lodash";
 import React, { useEffect, useMemo, useState } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
 import { useParams } from "react-router";
+import useWebSocket, { ReadyState } from "react-use-websocket";
 import { checkWords, loadGame, makeMove, sortHand } from "../api";
 import { GAMESTATUS, GOINGOUTSTATUS, MOVETYPES } from "../const";
 import Deck from "./Deck";
@@ -26,8 +27,6 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-//const eventUrl = process.env.REACT_APP_API_BASE_URL.replace("/api", "/sse");
-
 const swapArrayElements = (list, startIndex, endIndex) => {
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
@@ -44,23 +43,31 @@ const Game = ({ auth }) => {
   let [hand, setHand] = useState();
   let [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
 
-  //let eventSource = useRef();
-
-  useEffect(
-    () => {
-      const asyncEffect = async () => {
-        loadGame(gameId).then((res) => {
-          setState(res);
-        });
-      };
-
-      asyncEffect();
-      //eventSource.current = new EventSource(eventUrl);
-      //eventSource.current.onmessage = handleEvent;
-    },
-    // eslint-disable-next-line
-    [gameId]
+  const { sendJsonMessage, lastMessage, readyState } = useWebSocket(
+    import.meta.env.VITE_WEB_SOCKET_URL
   );
+
+  useEffect(() => {
+    if (readyState == ReadyState.OPEN) {
+      sendJsonMessage({ action: "connect", channel: gameId });
+    }
+  }, [readyState]);
+
+  useEffect(() => {
+    if (lastMessage?.data == "Update Available") {
+      loadGame(gameId).then((res) => setState(res));
+    }
+  }, [lastMessage]);
+
+  useEffect(() => {
+    loadGame(gameId).then((res) => {
+      setState(res);
+    });
+
+    return () => {
+      sendJsonMessage({ action: "disconnect", channel: gameId });
+    };
+  }, [gameId]);
 
   const gameStatus = useMemo(() => {
     if (!game) return;
@@ -85,12 +92,6 @@ const Game = ({ auth }) => {
     });
     setHand(me.hand);
     setGame(game);
-  };
-
-  const handleEvent = (e) => {
-    if (e.data === gameId) {
-      loadGame(gameId).then((res) => setState(res));
-    }
   };
 
   const handleDrawFromDiscard = () => {
@@ -124,7 +125,7 @@ const Game = ({ auth }) => {
         var checkedWords = await checkWords(wordStrings);
 
         if (checkedWords.invalidWords?.length > 0) {
-          alert(checkedWords.invalidWords.join(","));
+          alert("Invalid words: " + checkedWords.invalidWords.join(","));
           return;
         }
 
@@ -183,7 +184,7 @@ const Game = ({ auth }) => {
     setGoingOut({
       status: GOINGOUTSTATUS.GOING,
       hand: newHand,
-      words: newWords,
+      words: newWords.filter((w) => w.length > 0),
     });
   };
 
