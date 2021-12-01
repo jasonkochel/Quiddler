@@ -22,18 +22,11 @@ public class WsService : IWsService
 
     public async Task SendMessageToConnection(string message, string connectionId)
     {
-        try
+        await _apiGateway.PostToConnectionAsync(new PostToConnectionRequest
         {
-            await _apiGateway.PostToConnectionAsync(new PostToConnectionRequest
-            {
-                ConnectionId = connectionId,
-                Data = new MemoryStream(Encoding.ASCII.GetBytes(message))
-            });
-        }
-        catch (GoneException)
-        {
-            // ignore if client is not connected
-        }
+            ConnectionId = connectionId,
+            Data = new MemoryStream(Encoding.ASCII.GetBytes(message))
+        });
     }
 
     public async Task SendMessageToChannel(string message, string channel)
@@ -41,7 +34,14 @@ public class WsService : IWsService
         var connections = await _repo.GetClients(channel);
         foreach (var connectionId in connections)
         {
-            await SendMessageToConnection(message, connectionId);
+            try
+            {
+                await SendMessageToConnection(message, connectionId);
+            }
+            catch (GoneException)
+            {
+                await _repo.DeleteConnection(channel, connectionId);
+            }
         }
     }
 }

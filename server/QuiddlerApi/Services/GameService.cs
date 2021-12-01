@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using QuiddlerApi.Controllers;
+﻿using QuiddlerApi.Controllers;
 using QuiddlerApi.Data;
 using QuiddlerApi.Interfaces;
 using QuiddlerApi.Models;
@@ -39,10 +38,8 @@ public class GameService : IGameService
     {
         var gameId = await _repo.Create(new Game
         {
-            Players = new List<Player>
-            {
-                new Player {Name = _identity.Name}
-            }
+            Round = 0,
+            Players = new List<Player> { new(_identity.Name) }
         });
 
         return await Get(gameId);
@@ -69,14 +66,15 @@ public class GameService : IGameService
     {
         var game = await _repo.Get(gameId);
 
-        game.Round = game.Round == null ? 1 : game.Round + 1;
+        game.Round++;
 
         var deck = _deckService.GenerateShuffled();
 
         game.Players.ForEach(p =>
         {
             p.Hand = new List<string>();
-            p.IsGoingOut = false;
+            p.HasGoneOut = false;
+            p.ReadyForNextRound = false;
             p.Words = null;
         });
 
@@ -92,7 +90,7 @@ public class GameService : IGameService
         game.DiscardPile.Push(deck.Pop());
         game.Deck = deck;
 
-        game.Turn = game.Round.Value % game.Players.Count;
+        game.Turn = game.Round % game.Players.Count;
 
         await _repo.Update(game);
 
@@ -105,7 +103,7 @@ public class GameService : IGameService
     {
         var game = await _repo.Get(gameId);
 
-        if (game.Players[game.Turn].Name != _identity.Name)
+        if (move.Type != MoveType.ReadyForNextRound && game.Players[game.Turn].Name != _identity.Name)
         {
             throw new Exception("Not your turn");
         }
@@ -137,17 +135,19 @@ public class GameService : IGameService
                     throw new Exception($"Cannot discard '{move.Discard}' because it is not in your hand");
                 }
 
-                var validatedWords = await _dictionaryService.CheckWords(move.Words);
+                var flatWords = move.Words.Select(w => string.Join("", w.Select(c => c.Letter)));
+
+                var validatedWords = await _dictionaryService.CheckWords(flatWords);
                 if (validatedWords.InvalidWords.Any())
                 {
                     throw new Exception($"One or more words are invalid: {validatedWords.InvalidWords}");
                 }
 
-                var firstOneOut = !game.Players.Any(p => p.IsGoingOut);
+                var firstOneOut = !game.Players.Any(p => p.HasGoneOut);
 
                 if (firstOneOut)
                 {
-                    var cardsInWords = move.Words.Sum(w => w.Length);
+                    var cardsInWords = move.Words.SelectMany(w => w).Count();
                     if (cardsInWords < game.Round + 2)
                     {
                         throw new Exception("First player to go out must use all of the cards in their hand");
@@ -156,37 +156,42 @@ public class GameService : IGameService
 
                 game.Players[game.Turn].Hand.Remove(move.Discard);
 
-                var score = move.Words.Sum(_deckService.GetWordValue) -
+                var flatCards = move.Words.SelectMany(w => w).ToList();
+
+                foreach (var card in flatCards)
+                {
+                    game.Players[game.Turn].Hand.Remove(card.CardId);
+                }
+
+                var score = flatCards.Sum(c => c.Value) -
                             game.Players[game.Turn].Hand.Sum(c => _deckService.ToCardModel(c).Value);
 
-                Debug.Assert(game.Round != null, "game.Round != null");
-
-                game.Players[game.Turn].IsGoingOut = true;
-                game.Players[game.Turn].Hand.Clear();
-                game.Players[game.Turn].Words = move.Words.ToList();
-                game.Players[game.Turn].Scores[game.Round.Value - 1] = score;
+                game.Players[game.Turn].HasGoneOut = true;
+                game.Players[game.Turn].Words = move.Words.Select(w => w.Select(c => c.CardId).ToList()).ToList();
+                game.Players[game.Turn].Scores[game.Round - 1] = score < 0 ? 0 : score;
 
                 game.DiscardPile.Push(move.Discard);
                 game.Turn = (game.Turn + 1) % game.Players.Count;
 
                 break;
 
+            case MoveType.ReadyForNextRound:
+                var who = game.Players.FindIndex(p => p.Name == _identity.Name);
+                game.Players[who].ReadyForNextRound = true;
+                break;
+
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException($"Invalid Move Type '{move.Type}'");
         }
+
+        // TODO handle game-over
 
         await _repo.Update(game);
 
-        if (move.Type == MoveType.GoOut)
+        if (move.Type == MoveType.ReadyForNextRound && game.Players.All(p => p.ReadyForNextRound))
         {
-            var roundOver = game.Players.All(p => p.IsGoingOut);
-            if (roundOver)
-            {
-                return await StartRound(game.GameId);
-            }
+            return await StartRound(game.GameId);
         }
-
-        await _repo.Update(game);
 
         await _wsService.SendMessageToChannel("Update Available", gameId);
 

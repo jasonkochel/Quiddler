@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using QuiddlerApi.Interfaces;
 using QuiddlerApi.Models;
-using QuiddlerApi.Services;
 
 namespace QuiddlerApi.Controllers;
 
@@ -22,34 +21,43 @@ public class GamesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IEnumerable<GameListModel>> Get()
+    public async Task<IEnumerable<GameListModel>> GetGameList()
     {
         return await _gameService.GetAll();
     }
 
     [HttpGet("{id}")]
-    public async Task<GameModel> Get(string id)
+    public async Task<GameModel> GetGame(string id)
     {
         return await _gameService.Get(id);
     }
 
     [HttpPost]
-    public async Task<GameModel> Post()
+    public async Task<IEnumerable<GameListModel>> CreateGame()
     {
-        return await _gameService.Create();
+        await _gameService.Create();
+        return await GetGameList();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IEnumerable<GameListModel>> DeleteGame(string id)
+    {
+        await _gameService.Delete(id);
+        return await GetGameList();
     }
 
     [HttpPost("{id}/players")]
-    public async Task<GameModel> AddPlayer(string id, [FromQuery] bool startGame)
+    public async Task<IEnumerable<GameListModel>> AddPlayer(string id)
     {
-        var gameModel = await _gameService.AddPlayer(id);
+        await _gameService.AddPlayer(id);
+        return await GetGameList();
+    }
 
-        if (startGame)
-        {
-            return await _gameService.StartRound(id);
-        }
-
-        return gameModel;
+    [HttpPost("{id}/start")]
+    public async Task<IEnumerable<GameListModel>> StartGame(string id)
+    {
+        await _gameService.StartRound(id);
+        return await GetGameList();
     }
 
     [HttpPut("{id}")]

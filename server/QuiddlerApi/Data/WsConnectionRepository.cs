@@ -21,4 +21,9 @@ public class WsConnectionRepository : IWsConnectionRepository
         var clients = await _db.QueryAsync<WsConnection>(id).GetRemainingAsync();
         return clients.Select(c => c.ConnectionId);
     }
+
+    public async Task DeleteConnection(string channel, string connectionId)
+    {
+        await _db.DeleteAsync<WsConnection>(channel, connectionId);
+    }
 }

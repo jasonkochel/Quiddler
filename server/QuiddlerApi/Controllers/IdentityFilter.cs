@@ -7,7 +7,10 @@ public class IdentityFilter : ActionFilterAttribute
     public override void OnActionExecuting(ActionExecutingContext context)
     {
         var userIdentity = (UserIdentity) context.HttpContext.RequestServices.GetService(typeof(UserIdentity));
-        userIdentity.Name = context.HttpContext.User?.Claims?.SingleOrDefault(p => p.Type == "name")?.Value;
+        if (userIdentity != null)
+        {
+            userIdentity.Name = context.HttpContext.User.Claims.SingleOrDefault(p => p.Type == "name")?.Value;
+        }
     }
 }
 

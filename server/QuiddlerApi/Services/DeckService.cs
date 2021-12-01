@@ -34,7 +34,7 @@ public abstract class BaseDeckService : IDeckService
 
     public CardModel ToCardModel(string card)
     {
-        var letter = card.Substring(0, card.IndexOf('-'));
+        var letter = card[..card.IndexOf('-')];
 
         return new CardModel
         {

@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-using Amazon.DynamoDBv2.DataModel;
+﻿using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 
 namespace QuiddlerApi.Data;
@@ -31,7 +30,7 @@ public class Game
     [DynamoDBProperty(typeof(StringStackConverter))]
     public Stack<string> DiscardPile { get; set; }
 
-    public int? Round { get; set; }
+    public int Round { get; set; }
     public int Turn { get; set; }
 }
 
@@ -42,21 +41,26 @@ public class Player
         Scores = new int[8];
     }
 
+    public Player(string name) : this()
+    {
+        Name = name;
+    }
+
     public string Name { get; set; }
     public List<string> Hand { get; set; }
+    public bool HasGoneOut { get; set; }
+    public bool ReadyForNextRound { get; set; }
+    public List<List<string>> Words { get; set; }
 
     [DynamoDBProperty(typeof(IntArrayConverter))]
     public int[] Scores { get; set; }
-
-    public bool IsGoingOut { get; set; }
-    public List<string> Words { get; set; }
 }
 
 public class StringStackConverter : IPropertyConverter
 {
     public DynamoDBEntry ToEntry(object value)
     {
-        if (!(value is Stack<string> stack))
+        if (value is not Stack<string> stack)
         {
             return new DynamoDBNull();
         }

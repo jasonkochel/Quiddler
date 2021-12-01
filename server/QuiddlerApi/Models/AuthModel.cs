@@ -1,4 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿// ReSharper disable CommentTypo
+// ReSharper disable UnusedMember.Global
+
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace QuiddlerApi.Models;
