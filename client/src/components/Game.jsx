@@ -1,5 +1,3 @@
-import { Fab, Grid } from "@material-ui/core";
-import { makeStyles } from "@material-ui/core/styles";
 import _ from "lodash";
 import React, { useEffect, useMemo, useState } from "react";
 import { DragDropContext } from "react-beautiful-dnd";
@@ -9,23 +7,10 @@ import { checkWords, loadGame, makeMove, sortHand } from "../api";
 import { GAMESTATUS, GOINGOUTSTATUS, MOVETYPES } from "../const";
 import Deck from "./Deck";
 import Hand from "./Hand";
+import MakeWords from "./MakeWords";
 import Scores from "./Scores";
 import Status from "./Status";
 import Words from "./Words";
-
-const useStyles = makeStyles((theme) => ({
-  root: {
-    flexGrow: 1,
-    width: "100%",
-    justify: "center",
-    alignItems: "flex-start",
-  },
-  fab: {
-    position: "absolute",
-    bottom: theme.spacing(2),
-    right: theme.spacing(2),
-  },
-}));
 
 const swapArrayElements = (list, startIndex, endIndex) => {
   const result = Array.from(list);
@@ -36,12 +21,17 @@ const swapArrayElements = (list, startIndex, endIndex) => {
 };
 
 const Game = ({ auth }) => {
-  const classes = useStyles();
   const { gameId } = useParams();
 
   let [game, setGame] = useState();
   let [hand, setHand] = useState();
   let [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
+
+  /*
+  const [socketUrl, setSocketUrl] = useState(
+    import.meta.env.VITE_WEB_SOCKET_URL
+  );
+*/
 
   const { sendJsonMessage, lastMessage, readyState } = useWebSocket(
     import.meta.env.VITE_WEB_SOCKET_URL
@@ -63,48 +53,46 @@ const Game = ({ auth }) => {
     loadGame(gameId).then((res) => {
       setState(res);
     });
-
-    return () => {
-      sendJsonMessage({ action: "disconnect", channel: gameId });
-    };
   }, [gameId]);
 
   const gameStatus = useMemo(() => {
     if (!game) return;
 
+    if (game.roundStatus === "AwaitingNextRound") {
+      return GAMESTATUS.PENDING_NEXT_ROUND;
+    }
+
+    if (goingOut.status === GOINGOUTSTATUS.GONE) {
+      return GAMESTATUS.PENDING_OPPONENT_OUT;
+    }
+
     if (game.whoseTurn !== auth.name) {
       return GAMESTATUS.PENDING_TURN;
-    } else {
-      if (hand.length > game.cardsInRound) {
-        return GAMESTATUS.PENDING_DISCARD;
-      } else {
-        return GAMESTATUS.PENDING_DRAW;
-      }
     }
-  }, [game, hand, auth]);
+    if (hand.length > game.cardsInRound) {
+      return GAMESTATUS.PENDING_DISCARD;
+    } else {
+      return GAMESTATUS.PENDING_DRAW;
+    }
+  }, [game, goingOut, hand, auth]);
 
+  // TODO: hand and goingout should be derived, not their own states
   const setState = (game) => {
     const me = game.players.find((p) => p.name === auth.name);
+    console.log(me);
     setGoingOut({
-      status: me.isGoingOut ? GOINGOUTSTATUS.GONE : GOINGOUTSTATUS.NONE,
+      status: me.hasGoneOut ? GOINGOUTSTATUS.GONE : GOINGOUTSTATUS.NONE,
       hand: [],
       words: me.words,
+      readyForNextRound: me.readyForNextRound,
     });
     setHand(me.hand);
     setGame(game);
   };
 
-  const handleDrawFromDiscard = () => {
+  const handleDrawCard = (moveType) => {
     if (gameStatus === GAMESTATUS.PENDING_DRAW) {
-      makeMove(gameId, MOVETYPES.DRAW_FROM_DISCARD).then((res) =>
-        setState(res)
-      );
-    }
-  };
-
-  const handleDrawFromDeck = () => {
-    if (gameStatus === GAMESTATUS.PENDING_DRAW) {
-      makeMove(gameId, MOVETYPES.DRAW_FROM_DECK).then((res) => setState(res));
+      makeMove(gameId, moveType).then((res) => setState(res));
     }
   };
 
@@ -112,8 +100,7 @@ const Game = ({ auth }) => {
     if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
       if (goingOut.status === GOINGOUTSTATUS.GOING) {
         // TODO: or, someone else has gone out, so you gotta
-        if (goingOut.hand.length !== 1) {
-          // TODO: not if someone else has already gone out
+        if (goingOut.hand.length !== 1 && game.roundStatus !== "MustGoOut") {
           alert("must use all letters before going out");
           return;
         }
@@ -131,7 +118,7 @@ const Game = ({ auth }) => {
 
         makeMove(gameId, MOVETYPES.GO_OUT, {
           cardToDiscard: card,
-          words: wordStrings,
+          words: goingOut.words,
         }).then((res) => {
           setGoingOut({ ...goingOut, status: GOINGOUTSTATUS.GONE });
           setState(res);
@@ -192,7 +179,13 @@ const Game = ({ auth }) => {
     setGoingOut({ status: GOINGOUTSTATUS.GOING, hand, words: [] });
   };
 
+  const handleStartNextRound = () =>
+    makeMove(gameId, MOVETYPES.READY_FOR_NEXT_ROUND).then((res) =>
+      setState(res)
+    );
+
   const handleDragEnd = (result) => {
+    console.log(result);
     if (!result.destination) {
       return;
     }
@@ -201,14 +194,14 @@ const Game = ({ auth }) => {
       result.draggableId === "shoe" &&
       result.destination.droppableId === "hand"
     ) {
-      handleDrawFromDeck();
+      handleDrawCard(MOVETYPES.DRAW_FROM_DECK);
     }
 
     if (
       result.draggableId === "discard" &&
       result.destination.droppableId === "hand"
     ) {
-      handleDrawFromDiscard();
+      handleDrawCard(MOVETYPES.DRAW_FROM_DISCARD);
     }
 
     if (
@@ -228,39 +221,53 @@ const Game = ({ auth }) => {
     if (result.destination.droppableId.startsWith("word")) {
       handleMakeWord(result.draggableId, result.source, result.destination);
     }
+
+    if (result.source.droppableId.startsWith("word")) {
+      if (result.destination.droppableId === "hand") {
+        // move from word back to hand
+      }
+      if (result.destination.droppableId === "deck") {
+        handleDiscard(result.draggableId);
+      }
+    }
   };
 
   if (!game) return null;
 
   return (
-    <Grid className={classes.root} container spacing={0}>
+    <div className="flex flex-col items-start justify-center w-full">
       <Scores players={game.players} />
-      <Status game={game} status={gameStatus} />
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
-        <Hand
-          hand={goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand}
-          gameStatus={gameStatus}
-        />
-        {gameStatus === GAMESTATUS.PENDING_DISCARD &&
-          goingOut.status === GOINGOUTSTATUS.NONE && (
-            <Fab
-              variant="extended"
-              color="primary"
-              className={classes.fab}
-              onClick={handleStartToGoOut}
-            >
-              Go Out
-            </Fab>
+      <Words players={game.players} />
+      <Status
+        game={game}
+        status={gameStatus}
+        goingOutStatus={goingOut}
+        onStartNextRound={handleStartNextRound}
+      />
+      {game.roundStatus !== "AwaitingNextRound" && (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
+          <Hand
+            hand={
+              goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand
+            }
+            gameStatus={gameStatus}
+          />
+          {gameStatus === GAMESTATUS.PENDING_DISCARD &&
+            goingOut.status === GOINGOUTSTATUS.NONE && (
+              <div
+                className="absolute p-4 text-xl text-white bg-blue-700 rounded-full cursor-pointer bottom-2 right-2"
+                onClick={handleStartToGoOut}
+              >
+                Go Out
+              </div>
+            )}
+          {goingOut.status === GOINGOUTSTATUS.GOING && (
+            <MakeWords words={goingOut.words} />
           )}
-        {goingOut.status === GOINGOUTSTATUS.GOING && (
-          <Words words={goingOut.words} />
-        )}
-        {goingOut.status === GOINGOUTSTATUS.GONE && (
-          <span>{goingOut.words.toString()}</span>
-        )}
-      </DragDropContext>
-    </Grid>
+        </DragDropContext>
+      )}
+    </div>
   );
 };
 

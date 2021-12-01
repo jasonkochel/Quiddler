@@ -1,8 +1,18 @@
+const colors = require("tailwindcss/colors");
+
 module.exports = {
+  mode: "jit",
   purge: ["./index.html", "./src/**/*.{js,jsx}"],
-  darkMode: false, // or 'media' or 'class'
+  darkMode: false,
   theme: {
-    extend: {},
+    extend: {
+      backgroundImage: {
+        "card-back": "url('/src/card-back.jpg')",
+      },
+      colors: {
+        green: colors.green,
+      },
+    },
   },
   variants: {
     extend: {},

@@ -28,21 +28,28 @@ const loadList = async () => {
 };
 
 const createGame = async () => {
-  await api.post("games");
+  const res = await api.post("games");
+  return res.data;
 };
 
 const joinGame = async (gameId) => {
-  await api.post(`games/${gameId}/players?startGame=true`);
+  const res = await api.post(`games/${gameId}/players`);
+  return res.data;
+};
+
+const startGame = async (gameId) => {
+  const res = await api.post(`games/${gameId}/start`);
+  return res.data;
 };
 
 const loadGame = async (gameId) => {
-  var res = await api.get(`games/${gameId}`);
+  const res = await api.get(`games/${gameId}`);
   return res.data;
 };
 
 const sortHand = async (gameId, newHand) => {
   const data = newHand.map((c) => c.cardId);
-  var res = await api.put(`games/${gameId}/hand?newHand=${data.toString()}`);
+  const res = await api.put(`games/${gameId}/hand?newHand=${data.toString()}`);
   return res.data;
 };
 
@@ -56,12 +63,12 @@ const makeMove = async (gameId, moveType, moveData) => {
     words: moveType === MOVETYPES.GO_OUT ? moveData.words : null,
   };
 
-  var res = await api.put(`games/${gameId}`, move);
+  const res = await api.put(`games/${gameId}`, move);
   return res.data;
 };
 
 const checkWords = async (words) => {
-  var res = await api.get(`games/dictionary?words=${words.toString()}`);
+  const res = await api.get(`games/dictionary?words=${words.toString()}`);
   return res.data;
 };
 
@@ -70,6 +77,7 @@ export {
   createGame,
   joinGame,
   loadGame,
+  startGame,
   sortHand,
   makeMove,
   checkWords,

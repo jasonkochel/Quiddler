@@ -1,30 +1,24 @@
-import { Grid, Paper } from "@material-ui/core";
-import { makeStyles } from "@material-ui/core/styles";
 import React from "react";
 
-const useStyles = makeStyles(theme => ({
-  paper: {
-    padding: theme.spacing(2),
-    textAlign: "center",
-    backgroundColor: "black",
-    color: "white"
-  }
-}));
-
 const Scores = ({ players }) => {
-  const classes = useStyles();
-
-  const width = 12 / players.length;
-
-  return players.map(p => (
-    <Grid key={p.name} item xs={width}>
-      <Paper square className={classes.paper}>
-        {p.name}
-        <br />
-        {p.score}
-      </Paper>
-    </Grid>
-  ));
+  return (
+    <div className="flex flex-row w-full">
+      {players.map((p, i) => (
+        <div
+          key={i}
+          className="flex-grow h-16 pt-2 text-center text-white bg-black"
+        >
+          {p.name}
+          <br />
+          {p.hasGoneOut
+            ? `${p.totalScore - p.roundScore} + ${p.roundScore} = ${
+                p.totalScore
+              }`
+            : p.totalScore}
+        </div>
+      ))}
+    </div>
+  );
 };
 
 export default Scores;
