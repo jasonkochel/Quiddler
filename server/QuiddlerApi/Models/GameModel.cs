@@ -27,7 +27,8 @@ public enum RoundStatus
 {
     InProgress,
     MustGoOut,
-    AwaitingNextRound
+    AwaitingNextRound,
+    GameOver
 }
 
 public class GameMapper
@@ -46,7 +47,7 @@ public class GameMapper
             GameId = game.GameId,
             CreatedAt = game.CreatedAt,
             HasStarted = game.Round != 0,
-            Round = game.Round + 2,
+            Round = game.Round,
             WhoseTurn = game.Players[game.Turn].Name,
             Players = game.Players.Select(p => p.Name).ToList()
         };
@@ -55,7 +56,7 @@ public class GameMapper
     public GameModel MapEntityToModel(Game game, string myName)
     {
         if (game == null) return null;
-        
+
         return new GameModel
         {
             GameId = game.GameId,
@@ -65,9 +66,14 @@ public class GameMapper
                 : _deckService.ToCardModel(game.DiscardPile.Peek()),
             WhoseTurn = game.Players[game.Turn].Name,
             RoundStatus =
-                game.Players.All(p => p.HasGoneOut) ? RoundStatus.AwaitingNextRound :
-                game.Players.Any(p => p.HasGoneOut) ? RoundStatus.MustGoOut :
-                RoundStatus.InProgress,
+                game.Players.All(p => p.HasGoneOut)
+                    ?
+                    (game.Round == 8 ? RoundStatus.GameOver : RoundStatus.AwaitingNextRound)
+                    :
+                    game.Players.Any(p => p.HasGoneOut)
+                        ? RoundStatus.MustGoOut
+                        :
+                        RoundStatus.InProgress,
             Players = game.Players.Select(p => new PlayerModel
             {
                 Name = p.Name,

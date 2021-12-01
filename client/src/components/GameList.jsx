@@ -5,17 +5,15 @@ import { createGame, joinGame, loadList, startGame } from "../api";
 const hydrateGame = (g, name) => {
   return {
     ...g,
-    canPlay: g.hasStarted && g.players.includes(name),
+    isOver: g.round === 8,
+    canPlay: g.hasStarted && g.round < 8 && g.players.includes(name),
     canJoin: !g.hasStarted && !g.players.includes(name),
     canStart: !g.hasStarted && g.players.length > 1,
   };
 };
 
 const ActionButton = ({ onClick, text }) => (
-  <button
-    className="px-2 py-1 bg-gray-200 border border-gray-600 rounded-md"
-    onClick={onClick}
-  >
+  <button className="px-2 py-1 bg-gray-200 border border-gray-600 rounded-md" onClick={onClick}>
     {text}
   </button>
 );
@@ -52,26 +50,16 @@ const GameList = ({ auth }) => {
             >
               <div className="my-auto text-left">
                 <p className="text-base">{g.players.join(", ")}</p>
-                {!g.hasStarted && (
-                  <p className="text-xs text-gray-600">Not Started</p>
-                )}
+                {g.isOver && <p className="text-xs text-gray-600">Game Over</p>}
+                {!g.hasStarted && <p className="text-xs text-gray-600">Not Started</p>}
               </div>
               <div className="my-auto">
                 {g.canPlay ? (
-                  <ActionButton
-                    onClick={() => handlePlayGame(g.gameId)}
-                    text="Play"
-                  />
+                  <ActionButton onClick={() => handlePlayGame(g.gameId)} text="Play" />
                 ) : g.canJoin ? (
-                  <ActionButton
-                    onClick={() => handleJoinGame(g.gameId)}
-                    text="Join"
-                  />
+                  <ActionButton onClick={() => handleJoinGame(g.gameId)} text="Join" />
                 ) : g.canStart ? (
-                  <ActionButton
-                    onClick={() => handleStartGame(g.gameId)}
-                    text="Start"
-                  />
+                  <ActionButton onClick={() => handleStartGame(g.gameId)} text="Start" />
                 ) : null}
               </div>
             </div>

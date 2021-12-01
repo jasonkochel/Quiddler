@@ -27,12 +27,6 @@ const Game = ({ auth }) => {
   let [hand, setHand] = useState();
   let [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
 
-  /*
-  const [socketUrl, setSocketUrl] = useState(
-    import.meta.env.VITE_WEB_SOCKET_URL
-  );
-*/
-
   const { sendJsonMessage, lastMessage, readyState } = useWebSocket(
     import.meta.env.VITE_WEB_SOCKET_URL
   );
@@ -58,28 +52,18 @@ const Game = ({ auth }) => {
   const gameStatus = useMemo(() => {
     if (!game) return;
 
-    if (game.roundStatus === "AwaitingNextRound") {
-      return GAMESTATUS.PENDING_NEXT_ROUND;
-    }
+    if (game.roundStatus === "GameOver") return GAMESTATUS.GAME_OVER;
+    if (game.roundStatus === "AwaitingNextRound") return GAMESTATUS.PENDING_NEXT_ROUND;
+    if (goingOut.status === GOINGOUTSTATUS.GONE) return GAMESTATUS.PENDING_OPPONENT_OUT;
+    if (game.whoseTurn !== auth.name) return GAMESTATUS.PENDING_TURN;
+    if (hand.length > game.cardsInRound) return GAMESTATUS.PENDING_DISCARD;
 
-    if (goingOut.status === GOINGOUTSTATUS.GONE) {
-      return GAMESTATUS.PENDING_OPPONENT_OUT;
-    }
-
-    if (game.whoseTurn !== auth.name) {
-      return GAMESTATUS.PENDING_TURN;
-    }
-    if (hand.length > game.cardsInRound) {
-      return GAMESTATUS.PENDING_DISCARD;
-    } else {
-      return GAMESTATUS.PENDING_DRAW;
-    }
+    return GAMESTATUS.PENDING_DRAW;
   }, [game, goingOut, hand, auth]);
 
-  // TODO: hand and goingout should be derived, not their own states
   const setState = (game) => {
     const me = game.players.find((p) => p.name === auth.name);
-    console.log(me);
+
     setGoingOut({
       status: me.hasGoneOut ? GOINGOUTSTATUS.GONE : GOINGOUTSTATUS.NONE,
       hand: [],
@@ -99,20 +83,17 @@ const Game = ({ auth }) => {
   const handleDiscard = async (card) => {
     if (gameStatus === GAMESTATUS.PENDING_DISCARD) {
       if (goingOut.status === GOINGOUTSTATUS.GOING) {
-        // TODO: or, someone else has gone out, so you gotta
         if (goingOut.hand.length !== 1 && game.roundStatus !== "MustGoOut") {
-          alert("must use all letters before going out");
+          alert("You must use all the letters in your hand");
           return;
         }
 
-        var wordStrings = goingOut.words.map((word) =>
-          word.map((c) => c.letter).join("")
-        );
+        var wordStrings = goingOut.words.map((word) => word.map((c) => c.letter).join(""));
 
         var checkedWords = await checkWords(wordStrings);
 
         if (checkedWords.invalidWords?.length > 0) {
-          alert("Invalid words: " + checkedWords.invalidWords.join(","));
+          alert("Some words are invalid:\n" + checkedWords.invalidWords.join("\n"));
           return;
         }
 
@@ -124,9 +105,11 @@ const Game = ({ auth }) => {
           setState(res);
         });
       } else {
-        makeMove(gameId, MOVETYPES.DISCARD, { cardToDiscard: card }).then(
-          (res) => setState(res)
-        );
+        if (game.roundStatus === "MustGoOut") {
+          alert("You must go out");
+          return;
+        }
+        makeMove(gameId, MOVETYPES.DISCARD, { cardToDiscard: card }).then((res) => setState(res));
       }
     }
   };
@@ -179,42 +162,28 @@ const Game = ({ auth }) => {
     setGoingOut({ status: GOINGOUTSTATUS.GOING, hand, words: [] });
   };
 
-  const handleStartNextRound = () =>
-    makeMove(gameId, MOVETYPES.READY_FOR_NEXT_ROUND).then((res) =>
-      setState(res)
-    );
+  const handleStartNextRound = () => {
+    makeMove(gameId, MOVETYPES.READY_FOR_NEXT_ROUND).then((res) => setState(res));
+  };
 
   const handleDragEnd = (result) => {
-    console.log(result);
     if (!result.destination) {
       return;
     }
 
-    if (
-      result.draggableId === "shoe" &&
-      result.destination.droppableId === "hand"
-    ) {
+    if (result.draggableId === "shoe" && result.destination.droppableId === "hand") {
       handleDrawCard(MOVETYPES.DRAW_FROM_DECK);
     }
 
-    if (
-      result.draggableId === "discard" &&
-      result.destination.droppableId === "hand"
-    ) {
+    if (result.draggableId === "discard" && result.destination.droppableId === "hand") {
       handleDrawCard(MOVETYPES.DRAW_FROM_DISCARD);
     }
 
-    if (
-      result.source.droppableId === "hand" &&
-      result.destination.droppableId === "deck"
-    ) {
+    if (result.source.droppableId === "hand" && result.destination.droppableId === "deck") {
       handleDiscard(result.draggableId);
     }
 
-    if (
-      result.source.droppableId === "hand" &&
-      result.destination.droppableId === "hand"
-    ) {
+    if (result.source.droppableId === "hand" && result.destination.droppableId === "hand") {
       handleSortHand(result.source.index, result.destination.index);
     }
 
@@ -224,7 +193,7 @@ const Game = ({ auth }) => {
 
     if (result.source.droppableId.startsWith("word")) {
       if (result.destination.droppableId === "hand") {
-        // move from word back to hand
+        handleMakeWord(result.draggableId, result.source, result.destination);
       }
       if (result.destination.droppableId === "deck") {
         handleDiscard(result.draggableId);
@@ -244,27 +213,22 @@ const Game = ({ auth }) => {
         goingOutStatus={goingOut}
         onStartNextRound={handleStartNextRound}
       />
-      {game.roundStatus !== "AwaitingNextRound" && (
+      {gameStatus !== GAMESTATUS.PENDING_NEXT_ROUND && gameStatus !== GAMESTATUS.GAME_OVER && (
         <DragDropContext onDragEnd={handleDragEnd}>
           <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
           <Hand
-            hand={
-              goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand
-            }
+            hand={goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand}
             gameStatus={gameStatus}
           />
-          {gameStatus === GAMESTATUS.PENDING_DISCARD &&
-            goingOut.status === GOINGOUTSTATUS.NONE && (
-              <div
-                className="absolute p-4 text-xl text-white bg-blue-700 rounded-full cursor-pointer bottom-2 right-2"
-                onClick={handleStartToGoOut}
-              >
-                Go Out
-              </div>
-            )}
-          {goingOut.status === GOINGOUTSTATUS.GOING && (
-            <MakeWords words={goingOut.words} />
+          {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (
+            <div
+              className="absolute p-4 text-xl text-white bg-blue-700 rounded-full cursor-pointer bottom-2 right-2"
+              onClick={handleStartToGoOut}
+            >
+              Go Out
+            </div>
           )}
+          {goingOut.status === GOINGOUTSTATUS.GOING && <MakeWords words={goingOut.words} />}
         </DragDropContext>
       )}
     </div>

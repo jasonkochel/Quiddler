@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router";
 import { GAMESTATUS, GOINGOUTSTATUS } from "../const";
 
 const messages = {
@@ -7,6 +8,7 @@ const messages = {
   [GAMESTATUS.PENDING_DRAW]: "Draw from Discard or Deck",
   [GAMESTATUS.PENDING_NEXT_ROUND]: "The Round is Over",
   [GAMESTATUS.PENDING_OPPONENT_OUT]: "Waiting for $ to Go Out",
+  [GAMESTATUS.GAME_OVER]: "Game Over!",
 };
 
 const NEXT_ROUND_STATUS = {
@@ -16,7 +18,7 @@ const NEXT_ROUND_STATUS = {
 };
 
 const Status = ({ game, status, goingOutStatus, onStartNextRound }) => {
-  //console.log(game, status, goingOutStatus);
+  const navigate = useNavigate();
 
   const bgColor =
     status === GAMESTATUS.PENDING_TURN
@@ -26,7 +28,7 @@ const Status = ({ game, status, goingOutStatus, onStartNextRound }) => {
       : "bg-green-300";
 
   let nextRoundStatus = NEXT_ROUND_STATUS.NONE;
-  if (game.roundStatus === "AwaitingNextRound") {
+  if (status === GAMESTATUS.PENDING_NEXT_ROUND) {
     if (goingOutStatus.readyForNextRound) {
       nextRoundStatus = NEXT_ROUND_STATUS.WAIT;
     } else {
@@ -36,35 +38,35 @@ const Status = ({ game, status, goingOutStatus, onStartNextRound }) => {
 
   return (
     <>
-      {game.roundStatus === "MustGoOut" &&
-        goingOutStatus.status === GOINGOUTSTATUS.NONE && (
-          <div className={`text-center p-4 w-full bg-red-500`}>
-            The round is ending. You must go out.
-          </div>
-        )}
-      <div className={`text-center p-4 w-full ${bgColor}`}>
-        {messages[status].replace("$", game.whoseTurn)}
-      </div>
+      {game.roundStatus === "MustGoOut" && goingOutStatus.status !== GOINGOUTSTATUS.GONE && (
+        <div className={`text-center p-4 mt-4 w-11/12 mx-auto rounded bg-red-500`}>
+          The round is ending. You must go out.
+        </div>
+      )}
 
-      {nextRoundStatus === NEXT_ROUND_STATUS.PROMPT ? (
-        <div className="w-full mx-auto mt-4">
-          <button
-            className="p-4 text-center text-black bg-green-300 rounded"
-            onClick={onStartNextRound}
-          >
-            Ready for Next Round
-          </button>
-        </div>
-      ) : nextRoundStatus === NEXT_ROUND_STATUS.WAIT ? (
-        <div className="w-full mx-auto mt-4">
-          <button
-            className="p-4 text-center text-black bg-red-300 rounded"
-            disabled
-          >
-            Waiting for Next Round
-          </button>
-        </div>
-      ) : null}
+      <div className={`text-center p-4 my-4 w-11/12 rounded mx-auto ${bgColor}`}>
+        {messages[status].replace("$", game.whoseTurn)}
+        {nextRoundStatus === NEXT_ROUND_STATUS.PROMPT ? (
+          <>
+            <br />
+            <a className="underline cursor-pointer" onClick={onStartNextRound}>
+              I am ready for the next round
+            </a>
+          </>
+        ) : nextRoundStatus === NEXT_ROUND_STATUS.WAIT ? (
+          <>
+            <br />
+            <span>Waiting for opponents to be ready for the next round...</span>
+          </>
+        ) : status === GAMESTATUS.GAME_OVER ? (
+          <>
+            <br />
+            <a className="underline cursor-pointer" onClick={() => navigate("/games")}>
+              Play Again
+            </a>
+          </>
+        ) : null}
+      </div>
     </>
   );
 };
