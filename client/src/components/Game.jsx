@@ -1,10 +1,11 @@
+import { closestCorners, DndContext, DragOverlay } from "@dnd-kit/core";
 import _ from "lodash";
 import React, { useEffect, useMemo, useState } from "react";
-import { DragDropContext } from "react-beautiful-dnd";
 import { useParams } from "react-router";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 import { checkWords, loadGame, makeMove, sortHand } from "../api";
 import { GAMESTATUS, GOINGOUTSTATUS, MOVETYPES } from "../const";
+import { DragOverlayCard } from "./Card";
 import Deck from "./Deck";
 import Hand from "./Hand";
 import MakeWords from "./MakeWords";
@@ -23,9 +24,10 @@ const swapArrayElements = (list, startIndex, endIndex) => {
 const Game = ({ auth }) => {
   const { gameId } = useParams();
 
-  let [game, setGame] = useState();
-  let [hand, setHand] = useState();
-  let [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
+  const [game, setGame] = useState();
+  const [hand, setHand] = useState();
+  const [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
+  const [draggingId, setDraggingId] = useState();
 
   const { sendJsonMessage, lastMessage, readyState } = useWebSocket(
     import.meta.env.VITE_WEB_SOCKET_URL
@@ -166,27 +168,47 @@ const Game = ({ auth }) => {
     makeMove(gameId, MOVETYPES.READY_FOR_NEXT_ROUND).then((res) => setState(res));
   };
 
+  const handleDragStart = (event) => {
+    setDraggingId(event.active.id);
+  };
+
   const handleDragEnd = (result) => {
-    if (!result.destination) {
+    console.log("handleDragEnd", result);
+
+    setDraggingId(null);
+
+    if (!result.active || !result.over) {
       return;
     }
 
-    if (result.draggableId === "shoe" && result.destination.droppableId === "hand") {
+    if (result.active.data?.current?.el === "shoe" && result.over.data?.current?.src === "hand") {
       handleDrawCard(MOVETYPES.DRAW_FROM_DECK);
     }
 
-    if (result.draggableId === "discard" && result.destination.droppableId === "hand") {
+    if (
+      result.active.data?.current?.el === "discard" &&
+      result.over.data?.current?.src === "hand"
+    ) {
       handleDrawCard(MOVETYPES.DRAW_FROM_DISCARD);
     }
 
-    if (result.source.droppableId === "hand" && result.destination.droppableId === "deck") {
-      handleDiscard(result.draggableId);
+    if (result.active.data?.current?.src === "hand" && result.over.data?.current?.src === "deck") {
+      handleDiscard(result.active.id);
     }
 
-    if (result.source.droppableId === "hand" && result.destination.droppableId === "hand") {
-      handleSortHand(result.source.index, result.destination.index);
+    if (result.active.data?.current?.src === "hand" && result.over.data?.current?.src === "hand") {
+      const src = result.active.id;
+      const dst = result.over.id;
+
+      if (src === dst) return;
+
+      handleSortHand(
+        hand.findIndex((c) => c.cardId === src),
+        hand.findIndex((c) => c.cardId === dst)
+      );
     }
 
+    /*
     if (result.destination.droppableId.startsWith("word")) {
       handleMakeWord(result.draggableId, result.source, result.destination);
     }
@@ -199,6 +221,7 @@ const Game = ({ auth }) => {
         handleDiscard(result.draggableId);
       }
     }
+    */
   };
 
   if (!game) return null;
@@ -214,22 +237,32 @@ const Game = ({ auth }) => {
         onStartNextRound={handleStartNextRound}
       />
       {gameStatus !== GAMESTATUS.PENDING_NEXT_ROUND && gameStatus !== GAMESTATUS.GAME_OVER && (
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DndContext
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          collisionDetection={closestCorners}
+        >
           <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
           <Hand
             hand={goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand}
             gameStatus={gameStatus}
           />
-          {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (
-            <div
-              className="absolute p-4 text-xl text-white bg-blue-700 rounded-full cursor-pointer bottom-2 right-2"
-              onClick={handleStartToGoOut}
-            >
-              Go Out
-            </div>
-          )}
+
           {goingOut.status === GOINGOUTSTATUS.GOING && <MakeWords words={goingOut.words} />}
-        </DragDropContext>
+          <DragOverlay>
+            {draggingId ? (
+              <DragOverlayCard id={draggingId} showBack={draggingId === "shoe"} />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+      {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (
+        <div
+          className="absolute p-4 text-xl text-white bg-blue-700 rounded-full cursor-pointer bottom-2 right-2"
+          onClick={handleStartToGoOut}
+        >
+          Go Out
+        </div>
       )}
     </div>
   );

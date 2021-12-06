@@ -1,10 +1,10 @@
 import React from "react";
-import Card from "./Card";
+import { SmallCard } from "./Card";
 
 const Word = ({ word }) => (
   <div className="flex flex-row justify-center w-full">
     {word.map((c, i) => (
-      <Card key={i} small letter={c.letter} />
+      <SmallCard key={i} letter={c.letter} />
     ))}
   </div>
 );
@@ -18,8 +18,7 @@ const Words = ({ players }) => {
       {anyWords &&
         players.map((p, i) => (
           <div key={i} className="flex-grow max-w-[50%] pt-2 text-center">
-            {p.words?.length > 0 &&
-              p.words.map((w, j) => <Word key={j} word={w} />)}
+            {p.words?.length > 0 && p.words.map((w, j) => <Word key={j} word={w} />)}
           </div>
         ))}
     </div>
