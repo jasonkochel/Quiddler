@@ -46,9 +46,7 @@ const Game = ({ auth }) => {
   }, [lastMessage]);
 
   useEffect(() => {
-    loadGame(gameId).then((res) => {
-      setState(res);
-    });
+    loadGame(gameId).then((res) => setState(res));
   }, [gameId]);
 
   const gameStatus = useMemo(() => {
@@ -247,7 +245,6 @@ const Game = ({ auth }) => {
             hand={goingOut.status === GOINGOUTSTATUS.NONE ? hand : goingOut.hand}
             gameStatus={gameStatus}
           />
-
           {goingOut.status === GOINGOUTSTATUS.GOING && <MakeWords words={goingOut.words} />}
           <DragOverlay>
             {draggingId ? (
@@ -255,6 +252,14 @@ const Game = ({ auth }) => {
             ) : null}
           </DragOverlay>
         </DndContext>
+      )}
+      {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (
+        <div
+          className="absolute p-4 text-xl text-white bg-blue-700 rounded-full cursor-pointer bottom-2 right-2"
+          onClick={handleStartToGoOut}
+        >
+          Go Out
+        </div>
       )}
       {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (
         <div
