@@ -6,10 +6,10 @@ using System.Text.Json.Serialization;
 
 namespace QuiddlerApi.Models;
 
-public class UserModel
+public record UserModel
 {
-    public string Name { get; set; }
-    public string Email { get; set; }
+    public string Name { get; init; }
+    public string Email { get; init; }
 }
 
 public class UserView
