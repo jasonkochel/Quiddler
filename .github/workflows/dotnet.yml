@@ -9,6 +9,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: Production
+    defaults:
+      run:
+        working-directory: ./server/QuiddlerApi
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET
@@ -23,7 +26,7 @@ jobs:
     - name: Variable Substitution
       uses: microsoft/variable-substitution@v1
       with:
-        files: './Quiddler/appsettings.json'
+        files: './appsettings.json'
       env:
         JwtSecret: ${{ secrets.JWT_SECRET }}
         RapidApiKey: ${{ secrets.RAPID_API_KEY }}
@@ -31,5 +34,4 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Publish
-      working-directory: ./Quiddler
       run: dotnet lambda deploy-serverless --stack-name QuiddlerApi --s3-bucket jason_kochel --template serverless.template --region us-east-1 --aws-access-key-id ${{ secrets.AWS_ACCESS_KEY_ID }} --aws-secret-key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
