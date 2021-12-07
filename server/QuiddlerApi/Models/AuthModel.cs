@@ -12,10 +12,10 @@ public record UserModel
     public string Email { get; init; }
 }
 
-public class UserView
+public record UserView
 {
     // ReSharper disable once InconsistentNaming
-    public string tokenId { get; set; }
+    public string tokenId { get; init; }
 }
 
 /// <summary>
