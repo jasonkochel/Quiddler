@@ -1,8 +1,8 @@
 ﻿namespace QuiddlerApi.Models;
 
-public class CardModel
+public record CardModel
 {
-    public string CardId { get; set; }
-    public string Letter { get; set; }
-    public int Value { get; set; }
+    public string CardId { get; init; }
+    public string Letter { get; init; }
+    public int Value { get; init; }
 }
