@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-const Card = ({ id, showBack, dndDisabled, dndData }) => {
+const Card = ({ id, value, showBack, dndDisabled, dndData }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled: dndDisabled,
@@ -11,11 +11,12 @@ const Card = ({ id, showBack, dndDisabled, dndData }) => {
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
-  let letter, value;
+  let letter;
   if (!!id && id.indexOf("-") > -1) {
-    [letter, value] = id.split("-");
+    [letter] = id.split("-");
   }
 
   return (
@@ -39,9 +40,9 @@ const Card = ({ id, showBack, dndDisabled, dndData }) => {
 };
 
 const DragOverlayCard = ({ id, showBack }) => {
-  let letter, value;
+  let letter;
   if (!!id && id.indexOf("-") > -1) {
-    [letter, value] = id.split("-");
+    [letter] = id.split("-");
   }
 
   return (
@@ -53,7 +54,6 @@ const DragOverlayCard = ({ id, showBack }) => {
       {!showBack && (
         <div className="flex flex-col h-full text-center justify-evenly">
           <div className="text-2xl">{letter}</div>
-          <div className="text-gray-500">{value}</div>
         </div>
       )}
     </div>

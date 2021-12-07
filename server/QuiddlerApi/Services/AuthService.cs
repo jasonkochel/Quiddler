@@ -17,11 +17,7 @@ public class AuthService : IAuthService
 
     public UserModel Authenticate(GoogleJsonWebSignaturePayload payload)
     {
-        return new UserModel
-        {
-            Name = payload.Name,
-            Email = payload.Email
-        };
+        return new UserModel(payload.Name, payload.Email);
     }
 
     public async Task<GoogleJsonWebSignaturePayload> ValidateGoogleJwtAsync(string token)

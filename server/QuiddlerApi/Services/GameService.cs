@@ -184,8 +184,6 @@ public class GameService : IGameService
                 throw new ArgumentOutOfRangeException($"Invalid Move Type '{move.Type}'");
         }
 
-        // TODO handle game-over
-
         await _repo.Update(game);
 
         if (move.Type == MoveType.ReadyForNextRound && game.Players.All(p => p.ReadyForNextRound))

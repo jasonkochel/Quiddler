@@ -14,11 +14,17 @@ const Deck = ({ discardPile, gameStatus }) => {
       {discardPile && (
         <Card
           id={discardPile.cardId}
+          value={discardPile.value}
           dndDisabled={gameStatus !== GAMESTATUS.PENDING_DRAW}
           dndData={{ src: "deck", el: "discard" }}
         />
       )}
-      <Card showBack id="shoe" dndData={{ src: "deck", el: "shoe" }} />
+      <Card
+        showBack
+        id="shoe"
+        dndDisabled={gameStatus !== GAMESTATUS.PENDING_DRAW}
+        dndData={{ src: "deck", el: "shoe" }}
+      />
     </div>
   );
 };

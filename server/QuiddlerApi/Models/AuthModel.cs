@@ -1,22 +1,15 @@
 ﻿// ReSharper disable CommentTypo
 // ReSharper disable UnusedMember.Global
+// ReSharper disable InconsistentNaming
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace QuiddlerApi.Models;
 
-public class UserModel
-{
-    public string Name { get; set; }
-    public string Email { get; set; }
-}
+public record UserModel(string Name, string Email);
 
-public class UserView
-{
-    // ReSharper disable once InconsistentNaming
-    public string tokenId { get; set; }
-}
+public record UserView(string tokenId);
 
 /// <summary>
 /// The payload as specified in 

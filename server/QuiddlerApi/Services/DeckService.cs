@@ -36,12 +36,7 @@ public abstract class BaseDeckService : IDeckService
     {
         var letter = card[..card.IndexOf('-')];
 
-        return new CardModel
-        {
-            CardId = card,
-            Letter = letter,
-            Value = Values[letter]
-        };
+        return new CardModel(card, letter, Values[letter]);
     }
 }
 

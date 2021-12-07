@@ -11,7 +11,7 @@ const Hand = ({ hand }) => {
         strategy={horizontalListSortingStrategy}
       >
         {hand.map((c, i) => (
-          <Card key={c.cardId} id={c.cardId} dndData={{ src: "hand" }} />
+          <Card key={c.cardId} id={c.cardId} value={c.value} dndData={{ src: "hand" }} />
         ))}
       </SortableContext>
     </div>

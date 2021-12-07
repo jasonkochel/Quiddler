@@ -1,12 +1,12 @@
 ﻿namespace QuiddlerApi.Models;
 
-public class PlayerModel
+public record PlayerModel
 {
-    public string Name { get; set; }
-    public List<CardModel> Hand { get; set; }
-    public List<List<CardModel>> Words { get; set; }
-    public int TotalScore { get; set; }
-    public int RoundScore { get; set; }
-    public bool HasGoneOut { get; set; }
-    public bool ReadyForNextRound { get; set; }
+    public string Name { get; init; }
+    public List<CardModel> Hand { get; init; }
+    public List<List<CardModel>> Words { get; init; }
+    public int TotalScore { get; init; }
+    public int RoundScore { get; init; }
+    public bool HasGoneOut { get; init; }
+    public bool ReadyForNextRound { get; init; }
 }

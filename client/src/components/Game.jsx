@@ -238,6 +238,9 @@ const Game = ({ auth }) => {
         <DndContext
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onDragOver={(e) => {
+            if (e.active?.data?.current?.src !== e.over?.data?.current?.src) console.log(e);
+          }}
           collisionDetection={closestCorners}
         >
           <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
@@ -246,11 +249,13 @@ const Game = ({ auth }) => {
             gameStatus={gameStatus}
           />
           {goingOut.status === GOINGOUTSTATUS.GOING && <MakeWords words={goingOut.words} />}
-          <DragOverlay>
-            {draggingId ? (
-              <DragOverlayCard id={draggingId} showBack={draggingId === "shoe"} />
-            ) : null}
-          </DragOverlay>
+          {true && (
+            <DragOverlay>
+              {draggingId ? (
+                <DragOverlayCard id={draggingId} showBack={draggingId === "shoe"} />
+              ) : null}
+            </DragOverlay>
+          )}
         </DndContext>
       )}
       {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (
