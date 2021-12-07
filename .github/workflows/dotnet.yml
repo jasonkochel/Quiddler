@@ -1,0 +1,35 @@
+name: .NET
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+    - '**.cs'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
+        include-prerelease: true
+    - name: Setup AWS SAM Tooling
+      run: dotnet tool install -g Amazon.Lambda.Tools
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Variable Substitution
+      uses: microsoft/variable-substitution@v1
+      with:
+        files: './Quiddler/appsettings.json'
+      env:
+        JwtSecret: ${{ secrets.JWT_SECRET }}
+        RapidApiKey: ${{ secrets.RAPID_API_KEY }}
+        WsUrl: ${{ secrets.WS_URL }}
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Publish
+      working-directory: ./Quiddler
+      run: dotnet lambda deploy-serverless --stack-name QuiddlerApi --s3-bucket jason_kochel --template serverless.template --region us-east-1 --aws-access-key-id ${{ secrets.AWS_ACCESS_KEY_ID }} --aws-secret-key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
