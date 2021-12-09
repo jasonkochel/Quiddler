@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using Amazon.DynamoDBv2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
 using QuiddlerApi.Controllers;
 using QuiddlerApi.Data;
@@ -26,6 +27,11 @@ public class Startup
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        });
+
+        services.AddHttpLogging(logging =>
+        {
+            logging.LoggingFields = HttpLoggingFields.RequestProperties;
         });
 
         services.AddControllers();
@@ -78,6 +84,7 @@ public class Startup
             app.UseDeveloperExceptionPage();
         }
 
+        app.UseHttpLogging();
         app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
         app.UseRouting();
 
