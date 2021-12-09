@@ -2,7 +2,8 @@ name: React Client
 on:
   push:
     paths:
-    - '**.js?'    
+    - '**.js'
+    - '**.jsx'
     branches:
     - master
 jobs:
