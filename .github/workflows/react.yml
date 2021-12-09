@@ -2,12 +2,13 @@ name: React Client
 on:
   push:
     paths:
-    - '**.js'    
+    - '**.js?'    
     branches:
     - master
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Production
     strategy:
       matrix:
         node-version: [12.x]
