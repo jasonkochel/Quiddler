@@ -13,7 +13,8 @@
         "Timeout": 30,
         "Role": null,
         "Policies": [
-          "AWSLambda_FullAccess"
+          "AWSLambda_FullAccess",
+          "AmazonDynamoDBFullAccess"
         ],
         "Events": {
           "ProxyResource": {
@@ -36,9 +37,9 @@
   },
   "Outputs": {
     "ApiURL": {
-      "Description": "API endpoint URL for Prod environment",
+      "Description": "API endpoint URL for default environment",
       "Value": {
-        "Fn::Sub": "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+        "Fn::Sub": "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
       }
     }
   }

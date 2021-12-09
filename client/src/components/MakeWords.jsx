@@ -8,26 +8,17 @@ const MakeWords = ({ words }) => {
   return (
     <div className="flex flex-col w-full">
       {words.map((word, wordIdx) => (
-        <Droppable
-          key={wordIdx}
-          droppableId={`word-${wordIdx}`}
-          direction="horizontal"
-        >
+        <Droppable key={wordIdx} droppableId={`word-${wordIdx}`} direction="horizontal">
           {(provided) => (
             <>
-              <div className="">Word {wordIdx + 1}</div>
-
+              <div>Word {wordIdx + 1}</div>
               <div
                 className="flex flex-row flex-wrap justify-center w-full"
                 ref={provided.innerRef}
                 {...provided.droppableProps}
               >
                 {word.map((card, cardIdx) => (
-                  <Draggable
-                    key={card.cardId}
-                    draggableId={card.cardId}
-                    index={cardIdx}
-                  >
+                  <Draggable key={card.cardId} draggableId={card.cardId} index={cardIdx}>
                     {(provided) => (
                       <Card
                         letter={card.letter}
