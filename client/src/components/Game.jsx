@@ -1,4 +1,4 @@
-import { closestCorners, DndContext, DragOverlay } from "@dnd-kit/core";
+import { DndContext, DragOverlay, rectIntersection } from "@dnd-kit/core";
 import _ from "lodash";
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
@@ -14,11 +14,23 @@ import Status from "./Status";
 import Words from "./Words";
 
 const swapArrayElements = (list, startIndex, endIndex) => {
+  //console.log("swap", list, startIndex, endIndex);
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
   result.splice(endIndex, 0, removed);
 
   return result;
+};
+
+const findWithPrePost = (list, keyField, dest) => {
+  switch (dest) {
+    case "pre":
+      return 0;
+    case "post":
+      return list.length;
+    default:
+      return list.findIndex((x) => x[keyField] === dest);
+  }
 };
 
 const Game = ({ auth }) => {
@@ -114,40 +126,44 @@ const Game = ({ auth }) => {
     }
   };
 
-  const handleSortHand = (src, dst) => {
-    const newHand = swapArrayElements(hand, src, dst);
+  const handleSortHand = (src, dest) => {
+    const srcIdx = hand.findIndex((c) => c.cardId === src);
+    const destIdx = findWithPrePost(hand, "cardId", dest);
 
-    // set local state so UI is immediately updated
-    setHand(newHand);
+    const newHand = swapArrayElements(hand, srcIdx, destIdx);
 
-    // save new hand to server and get it back to re-render properly
+    setHand(newHand); // update UI immediately
     sortHand(gameId, newHand).then((res) => setState(res));
   };
 
-  const handleMakeWord = (cardId, source, destination) => {
+  const handleMakeWord = (cardId, dest, srcRow, destRow) => {
+    console.log("makeWord", cardId, dest, srcRow, destRow);
+
     let newHand = _.cloneDeep(goingOut.hand);
     let newWords = _.cloneDeep(goingOut.words);
     let card;
 
-    if (source.droppableId === "hand") {
+    if (srcRow === "hand") {
       card = _.remove(newHand, (c) => c.cardId === cardId);
     }
-    if (source.droppableId.startsWith("word")) {
-      const i = parseInt(source.droppableId.substring(5));
+    if (srcRow.startsWith("word")) {
+      const i = parseInt(srcRow.substring(5));
       card = _.remove(newWords[i], (c) => c.cardId === cardId);
     }
 
     // "card" is now a one-element array of the card that was dropped, so the card object itself is card[0]
 
-    if (destination.droppableId === "hand") {
-      newHand.splice(destination.index, 0, card[0]);
+    if (destRow === "hand") {
+      const pos = newHand.findIndex((c) => c.cardId === dest);
+      newHand.splice(pos, 0, card[0]);
     }
-    if (destination.droppableId.startsWith("word")) {
-      if (destination.droppableId === "word-new") {
+    if (destRow.startsWith("word")) {
+      if (destRow === "word-new") {
         newWords.push(card);
       } else {
-        const i = parseInt(destination.droppableId.substring(5));
-        newWords[i].splice(destination.index, 0, card[0]);
+        const wordNum = parseInt(destRow.substring(5));
+        const pos = findWithPrePost(newWords[wordNum], "cardId", dest);
+        newWords[wordNum].splice(pos, 0, card[0]);
       }
     }
 
@@ -171,55 +187,49 @@ const Game = ({ auth }) => {
   };
 
   const handleDragEnd = (result) => {
-    console.log("handleDragEnd", result);
-
     setDraggingId(null);
 
-    if (!result.active || !result.over) {
+    const { active, over } = result;
+
+    if (!active || !over) {
       return;
     }
 
-    if (result.active.data?.current?.el === "shoe" && result.over.data?.current?.src === "hand") {
-      handleDrawCard(MOVETYPES.DRAW_FROM_DECK);
-    }
+    const src = active.id;
+    const dest = over.id;
+    const srcRow = active.data?.current?.src;
+    const destRow = over.data?.current?.src;
 
-    if (
-      result.active.data?.current?.el === "discard" &&
-      result.over.data?.current?.src === "hand"
-    ) {
-      handleDrawCard(MOVETYPES.DRAW_FROM_DISCARD);
-    }
+    console.log("handleDragEnd", src, srcRow, dest, destRow);
 
-    if (result.active.data?.current?.src === "hand" && result.over.data?.current?.src === "deck") {
-      handleDiscard(result.active.id);
-    }
-
-    if (result.active.data?.current?.src === "hand" && result.over.data?.current?.src === "hand") {
-      const src = result.active.id;
-      const dst = result.over.id;
-
-      if (src === dst) return;
-
-      handleSortHand(
-        hand.findIndex((c) => c.cardId === src),
-        hand.findIndex((c) => c.cardId === dst)
-      );
-    }
-
-    /*
-    if (result.destination.droppableId.startsWith("word")) {
-      handleMakeWord(result.draggableId, result.source, result.destination);
-    }
-
-    if (result.source.droppableId.startsWith("word")) {
-      if (result.destination.droppableId === "hand") {
-        handleMakeWord(result.draggableId, result.source, result.destination);
-      }
-      if (result.destination.droppableId === "deck") {
-        handleDiscard(result.draggableId);
+    if (srcRow === "deck" && destRow === "hand") {
+      if (src === "shoe") {
+        handleDrawCard(MOVETYPES.DRAW_FROM_DECK);
+      } else {
+        handleDrawCard(MOVETYPES.DRAW_FROM_DISCARD);
       }
     }
-    */
+
+    if (srcRow === "hand" && destRow === "deck") {
+      handleDiscard(active.id);
+    }
+
+    if (srcRow === "hand" && destRow === "hand" && src !== dest) {
+      handleSortHand(src, dest);
+    }
+
+    if (destRow.startsWith("word")) {
+      handleMakeWord(src, dest, srcRow, destRow);
+    }
+
+    if (srcRow.startsWith("word")) {
+      if (destRow === "hand") {
+        handleMakeWord(src, dest, srcRow, destRow);
+      }
+      if (destRow === "deck") {
+        handleDiscard(src);
+      }
+    }
   };
 
   if (!game) return null;
@@ -238,10 +248,7 @@ const Game = ({ auth }) => {
         <DndContext
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
-          onDragOver={(e) => {
-            if (e.active?.data?.current?.src !== e.over?.data?.current?.src) console.log(e);
-          }}
-          collisionDetection={closestCorners}
+          collisionDetection={rectIntersection}
         >
           <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
           <Hand
@@ -249,13 +256,11 @@ const Game = ({ auth }) => {
             gameStatus={gameStatus}
           />
           {goingOut.status === GOINGOUTSTATUS.GOING && <MakeWords words={goingOut.words} />}
-          {true && (
-            <DragOverlay>
-              {draggingId ? (
-                <DragOverlayCard id={draggingId} showBack={draggingId === "shoe"} />
-              ) : null}
-            </DragOverlay>
-          )}
+          <DragOverlay>
+            {draggingId ? (
+              <DragOverlayCard id={draggingId} showBack={draggingId === "shoe"} />
+            ) : null}
+          </DragOverlay>
         </DndContext>
       )}
       {gameStatus === GAMESTATUS.PENDING_DISCARD && goingOut.status === GOINGOUTSTATUS.NONE && (

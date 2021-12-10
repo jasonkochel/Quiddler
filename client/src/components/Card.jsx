@@ -21,7 +21,7 @@ const Card = ({ id, value, showBack, dndDisabled, dndData }) => {
 
   return (
     <div
-      className={`my-1 bg-white h-16 w-[40px] mx-1 rounded cursor-pointer bg-cover bg-center bg-no-repeat ${
+      className={`my-1 bg-white h-16 w-[40px] mx-1 rounded cursor-pointer bg-cover bg-center bg-no-repeat flex-grow-0 ${
         showBack ? "bg-card-back" : "bg-none"
       }`}
       ref={setNodeRef}
