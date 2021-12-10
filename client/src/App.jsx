@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { HashRouter as Router, Route, Routes } from "react-router-dom";
 import Game from "./components/Game";
 import GameList from "./components/GameList";
 import Login from "./components/Login";
@@ -14,7 +14,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen text-center bg-green-700 flex flex-col items-center text-base">
+      <div className="flex flex-col items-center min-h-screen text-base text-center bg-green-700">
         <Routes>
           <Route path="/" element={<Login auth={auth} setAuth={setAuth} />} />
           <Route path="/games/:gameId" element={<Game auth={auth} />} />

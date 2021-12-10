@@ -33,6 +33,7 @@ public class Startup
         {
             logging.LoggingFields = HttpLoggingFields.RequestProperties;
         });
+        services.AddLogging();
 
         services.AddControllers();
         services.AddMemoryCache();

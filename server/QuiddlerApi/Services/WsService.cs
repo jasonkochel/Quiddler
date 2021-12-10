@@ -10,10 +10,12 @@ public class WsService : IWsService
 {
     private readonly IWsConnectionRepository _repo;
     private readonly IAmazonApiGatewayManagementApi _apiGateway;
+    private readonly ILogger _logger;
 
-    public WsService(IWsConnectionRepository repo, IOptions<AppSettings> settings)
+    public WsService(IWsConnectionRepository repo, IOptions<AppSettings> settings, ILoggerFactory loggerFactory)
     {
         _repo = repo;
+        _logger = loggerFactory.CreateLogger("WebSocketService");
         _apiGateway = new AmazonApiGatewayManagementApiClient(new AmazonApiGatewayManagementApiConfig
         {
             ServiceURL = settings.Value.WsUrl
@@ -41,6 +43,10 @@ public class WsService : IWsService
             catch (GoneException)
             {
                 await _repo.DeleteConnection(channel, connectionId);
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e.Message);
             }
         }
     }
