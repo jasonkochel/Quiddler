@@ -1,5 +1,6 @@
 ﻿// ReSharper disable CommentTypo
 // ReSharper disable UnusedMember.Global
+// ReSharper disable InconsistentNaming
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;

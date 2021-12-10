@@ -1,10 +1,10 @@
 ﻿namespace QuiddlerApi.Models;
 
-public class MoveModel
+public record MoveModel
 {
-    public MoveType Type { get; set; }
-    public string Discard { get; set; }
-    public List<List<CardModel>> Words { get; set; }
+    public MoveType Type { get; init; }
+    public string Discard { get; init; }
+    public List<List<CardModel>> Words { get; init; }
 }
 
 public enum MoveType

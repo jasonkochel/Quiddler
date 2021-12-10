@@ -3,24 +3,24 @@ using QuiddlerApi.Interfaces;
 
 namespace QuiddlerApi.Models;
 
-public class GameListModel
+public record GameListModel
 {
-    public string GameId { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public bool HasStarted { get; set; }
-    public int? Round { get; set; }
-    public List<string> Players { get; set; }
-    public string WhoseTurn { get; set; }
+    public string GameId { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public bool HasStarted { get; init; }
+    public int? Round { get; init; }
+    public List<string> Players { get; init; }
+    public string WhoseTurn { get; init; }
 }
 
-public class GameModel
+public record GameModel
 {
-    public string GameId { get; set; }
-    public int CardsInRound { get; set; }
-    public CardModel TopOfDiscardPile { get; set; }
-    public string WhoseTurn { get; set; }
-    public RoundStatus RoundStatus { get; set; }
-    public List<PlayerModel> Players { get; set; }
+    public string GameId { get; init; }
+    public int CardsInRound { get; init; }
+    public CardModel TopOfDiscardPile { get; init; }
+    public string WhoseTurn { get; init; }
+    public RoundStatus RoundStatus { get; init; }
+    public List<PlayerModel> Players { get; init; }
 }
 
 public enum RoundStatus
