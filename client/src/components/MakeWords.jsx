@@ -18,7 +18,7 @@ const MakeWord = ({ word, wordIdx }) => {
       <div>Word {wordIdx + 1}</div>
       <div className="flex flex-row justify-center w-full">
         <div
-          className="flex-grow border border-white border-dashed rounded"
+          className="flex-grow border-0 border-white border-dashed rounded"
           ref={setNodeRefPre}
         ></div>
         <SortableContext
@@ -36,7 +36,7 @@ const MakeWord = ({ word, wordIdx }) => {
           ))}
         </SortableContext>
         <div
-          className="flex-grow border border-white border-dashed rounded"
+          className="flex-grow border-0 border-white border-dashed rounded"
           ref={setNodeRefPost}
         ></div>
       </div>
