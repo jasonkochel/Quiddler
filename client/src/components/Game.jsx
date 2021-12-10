@@ -1,4 +1,11 @@
-import { DndContext, DragOverlay, rectIntersection } from "@dnd-kit/core";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  rectIntersection,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import _ from "lodash";
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
@@ -14,7 +21,6 @@ import Status from "./Status";
 import Words from "./Words";
 
 const swapArrayElements = (list, startIndex, endIndex) => {
-  //console.log("swap", list, startIndex, endIndex);
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
   result.splice(endIndex, 0, removed);
@@ -40,6 +46,9 @@ const Game = ({ auth }) => {
   const [hand, setHand] = useState();
   const [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
   const [draggingId, setDraggingId] = useState();
+
+  //const sensors = useSensors(useSensor(TouchSensor), useSensor(PointerSensor));
+  const sensors = useSensors(useSensor(PointerSensor));
 
   const { sendJsonMessage, lastMessage, readyState } = useWebSocket(
     import.meta.env.VITE_WEB_SOCKET_URL
@@ -137,7 +146,7 @@ const Game = ({ auth }) => {
   };
 
   const handleMakeWord = (cardId, dest, srcRow, destRow) => {
-    console.log("makeWord", cardId, dest, srcRow, destRow);
+    //console.log("makeWord", cardId, dest, srcRow, destRow);
 
     let newHand = _.cloneDeep(goingOut.hand);
     let newWords = _.cloneDeep(goingOut.words);
@@ -200,7 +209,7 @@ const Game = ({ auth }) => {
     const srcRow = active.data?.current?.src;
     const destRow = over.data?.current?.src;
 
-    console.log("handleDragEnd", src, srcRow, dest, destRow);
+    //console.log("handleDragEnd", src, srcRow, dest, destRow);
 
     if (srcRow === "deck" && destRow === "hand") {
       if (src === "shoe") {
@@ -249,6 +258,7 @@ const Game = ({ auth }) => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           collisionDetection={rectIntersection}
+          sensors={sensors}
         >
           <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
           <Hand
