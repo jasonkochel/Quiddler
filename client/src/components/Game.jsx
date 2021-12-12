@@ -1,11 +1,11 @@
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  rectIntersection,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+/*
+click to draw
+pre/post drops for discard
+hand drop zone goes away if all cards are in words
+pre/post drops not working after initial drag from hand?
+*/
+
+import { DndContext, DragOverlay, rectIntersection } from "@dnd-kit/core";
 import _ from "lodash";
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
@@ -46,9 +46,6 @@ const Game = ({ auth }) => {
   const [hand, setHand] = useState();
   const [goingOut, setGoingOut] = useState({ status: GOINGOUTSTATUS.NONE });
   const [draggingId, setDraggingId] = useState();
-
-  //const sensors = useSensors(useSensor(TouchSensor), useSensor(PointerSensor));
-  const sensors = useSensors(useSensor(PointerSensor));
 
   const { sendJsonMessage, lastMessage, readyState } = useWebSocket(
     import.meta.env.VITE_WEB_SOCKET_URL
@@ -258,7 +255,6 @@ const Game = ({ auth }) => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           collisionDetection={rectIntersection}
-          sensors={sensors}
         >
           <Deck discardPile={game.topOfDiscardPile} gameStatus={gameStatus} />
           <Hand
