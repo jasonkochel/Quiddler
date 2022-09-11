@@ -2,7 +2,7 @@
 click to draw
 pre/post drops for discard
 hand drop zone goes away if all cards are in words
-pre/post drops not working after initial drag from hand?
+pre/post drops not working when dragging between words (or from hand to 2nd word?)
 */
 
 import { DndContext, DragOverlay, rectIntersection } from "@dnd-kit/core";
